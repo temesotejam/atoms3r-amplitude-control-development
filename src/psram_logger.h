@@ -247,17 +247,6 @@ class PsramLogger {
     float q_effective_pred_mA_s = NAN;
     uint16_t vbat_mV = 0;
     float i0_estimated_mA = NAN;
-    // V46ak pre-input state snapshot. These values are never read by control.
-    float pre_measured_current_mA = NAN;
-    uint32_t pre_current_sample_time_us = 0;
-    uint32_t pre_current_age_us = UINT32_MAX;
-    uint32_t pre_current_sequence = 0;
-    bool pre_current_valid = false;
-    float pre_wheel_speed_rpm = NAN;
-    uint32_t pre_wheel_speed_sample_time_us = 0;
-    uint32_t pre_wheel_speed_age_us = UINT32_MAX;
-    uint32_t pre_wheel_speed_sequence = 0;
-    bool pre_wheel_speed_valid = false;
     float solver_required_width_ms = NAN;
     uint16_t solver_selected_integer_width_ms = 0;
     uint16_t pulse_width_guard_max_ms = 0;
@@ -387,6 +376,17 @@ class PsramLogger {
     bool command_matches_zero_cross_motion = false;
     uint16_t vbat_mV = 0;
     float i0_estimated_mA = NAN;
+    // V46ak pre-input state snapshot. These values are never read by control.
+    float pre_measured_current_mA = NAN;
+    uint32_t pre_current_sample_time_us = 0;
+    uint32_t pre_current_age_us = UINT32_MAX;
+    uint32_t pre_current_sequence = 0;
+    bool pre_current_valid = false;
+    float pre_wheel_speed_rpm = NAN;
+    uint32_t pre_wheel_speed_sample_time_us = 0;
+    uint32_t pre_wheel_speed_age_us = UINT32_MAX;
+    uint32_t pre_wheel_speed_sequence = 0;
+    bool pre_wheel_speed_valid = false;
     float solver_required_width_ms = NAN;
     uint16_t solver_selected_integer_width_ms = 0;
     int16_t command_current_mA = 0;

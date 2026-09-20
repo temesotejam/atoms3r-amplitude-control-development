@@ -49,11 +49,11 @@ struct ExperimentStatus {
   bool roller_current_valid = false;
   float roller_q_meas_observed_mA_s = NAN;
   bool roller_q_meas_observed_valid = false;
-  int32_t roller_wheel_speed_rpm = 0;
+  float roller_wheel_speed_rpm = NAN;
   uint32_t roller_wheel_speed_sample_time_us = 0;
   uint32_t roller_wheel_speed_sequence = 0;
   bool roller_wheel_speed_valid = false;
-  int32_t roller_pulse_end_wheel_speed_rpm = 0;
+  float roller_pulse_end_wheel_speed_rpm = NAN;
   uint32_t roller_pulse_end_wheel_speed_sample_time_us = 0;
   uint32_t roller_pulse_end_wheel_speed_sequence = 0;
   uint32_t roller_pulse_end_wheel_speed_capture_delay_us = 0;

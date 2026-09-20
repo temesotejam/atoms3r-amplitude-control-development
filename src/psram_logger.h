@@ -366,6 +366,19 @@ class PsramLogger {
     bool command_matches_zero_cross_motion = false;
     uint16_t vbat_mV = 0;
     float i0_estimated_mA = NAN;
+
+    // V46ak observation-only snapshot taken before the pulse command is queued.
+    // These fields are never consulted by the controller or pulse solver.
+    uint32_t pre_input_capture_time_us = 0;
+    float pre_input_measured_current_mA = NAN;
+    uint32_t pre_input_current_sample_time_us = 0;
+    uint32_t pre_input_current_age_us = UINT32_MAX;
+    bool pre_input_current_valid = false;
+    float pre_input_wheel_speed_rpm = NAN;
+    uint32_t pre_input_wheel_speed_sample_time_us = 0;
+    uint32_t pre_input_wheel_speed_age_us = UINT32_MAX;
+    bool pre_input_wheel_speed_valid = false;
+
     float solver_required_width_ms = NAN;
     uint16_t solver_selected_integer_width_ms = 0;
     int16_t command_current_mA = 0;

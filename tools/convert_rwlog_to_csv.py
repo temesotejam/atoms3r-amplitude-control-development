@@ -976,7 +976,11 @@ ENERGY_CONTROL_AUTONOMOUS_PEAK_COLUMNS = [
     "peak_index", "peak_time_ms", "physical_peak_side", "peak_amplitude_deg",
     "target_peak_deg", "peak_error_deg", "phase", "integral_plus_mA_s",
     "integral_minus_mA_s", "first_peak", "pending_command_matched",
-    "pending_q_command_mA_s", "antiwindup_upper_hold", "antiwindup_lower_hold",
+    "pending_q_command_mA_s", "source_zero_cross_event_index", "source_output_executed",
+    "q_meas_observed_mA_s", "q_meas_observed_valid",
+    "post_pulse_wheel_speed_rpm", "post_pulse_wheel_speed_sample_time_us",
+    "post_pulse_wheel_speed_sequence", "post_pulse_wheel_speed_capture_delay_us",
+    "post_pulse_wheel_speed_valid", "antiwindup_upper_hold", "antiwindup_lower_hold",
 ]
 
 ENERGY_CONTROL_AUTONOMOUS_ZERO_CROSS_COLUMNS = [
@@ -994,10 +998,102 @@ ENERGY_CONTROL_AUTONOMOUS_ZERO_CROSS_COLUMNS = [
     "g_side_base_deg_per_mA_s", "g_side_corrected_deg_per_mA_s", "correction_blend_lambda",
     "predicted_next_peak_amplitude_deg", "q_saturated_upper", "q_saturated_lower",
     "q_command_direction", "command_matches_zero_cross_motion", "vbat_mV",
-    "i0_estimated_mA", "solver_required_width_ms", "solver_selected_integer_width_ms",
+    "i0_estimated_mA", "pre_measured_current_mA", "pre_current_sample_time_us",
+    "pre_current_age_us", "pre_current_sequence", "pre_current_valid",
+    "pre_wheel_speed_rpm", "pre_wheel_speed_sample_time_us", "pre_wheel_speed_age_us",
+    "pre_wheel_speed_sequence", "pre_wheel_speed_valid",
+    "solver_required_width_ms", "solver_selected_integer_width_ms",
     "command_current_mA", "pulse_width_ms", "pulse_start_ms", "pulse_end_ms",
     "output_executed", "valid", "reason", "reason_code",
 ]
+
+
+REPEATABILITY_COLUMNS = [
+    "event_index", "zero_cross_time_ms", "zero_cross_abs_rate_dps",
+    "physical_next_peak_side", "previous_peak_amplitude_deg",
+    "target_peak_deg", "predicted_next_peak_amplitude_deg",
+    "actual_next_peak_amplitude_deg", "prediction_error_deg",
+    "q_command_mA_s", "q_effective_pred_mA_s", "q_meas_observed_mA_s",
+    "q_meas_observed_valid", "q_command_direction", "vbat_mV",
+    "i0_estimated_mA", "pre_measured_current_mA", "pre_current_minus_i0_mA",
+    "pre_current_age_us", "pre_current_valid",
+    "pre_wheel_speed_rpm", "pre_wheel_speed_aligned_rpm",
+    "pre_wheel_speed_age_us", "pre_wheel_speed_valid",
+    "post_pulse_wheel_speed_rpm", "post_pulse_wheel_speed_valid",
+    "post_pulse_wheel_speed_capture_delay_us", "delta_wheel_speed_rpm",
+    "pulse_width_ms", "output_executed", "peak_time_ms",
+]
+
+def _finite_number(value):
+    return value if isinstance(value, (int, float)) and math.isfinite(value) else None
+
+def write_energy_control_repeatability_events(metadata: dict, out_dir: Path) -> int:
+    """Join each accepted autonomous zero-cross input with its following matched peak."""
+    peaks = metadata.get("energy_control_autonomous_peak_events")
+    zeros = metadata.get("energy_control_autonomous_zero_cross_events")
+    if not isinstance(peaks, list) or not isinstance(zeros, list):
+        return 0
+    zero_by_index = {
+        z.get("event_index"): z for z in zeros
+        if isinstance(z, dict) and isinstance(z.get("event_index"), int)
+    }
+    rows = []
+    for peak in peaks:
+        if not isinstance(peak, dict) or not peak.get("pending_command_matched"):
+            continue
+        source_index = peak.get("source_zero_cross_event_index")
+        zero = zero_by_index.get(source_index)
+        if not isinstance(zero, dict):
+            continue
+
+        i0 = _finite_number(zero.get("i0_estimated_mA"))
+        pre_current = _finite_number(zero.get("pre_measured_current_mA"))
+        pre_speed = _finite_number(zero.get("pre_wheel_speed_rpm"))
+        post_speed = _finite_number(peak.get("post_pulse_wheel_speed_rpm"))
+        direction = _finite_number(zero.get("q_command_direction"))
+        predicted = _finite_number(zero.get("predicted_next_peak_amplitude_deg"))
+        actual = _finite_number(peak.get("peak_amplitude_deg"))
+
+        row = {
+            "event_index": source_index,
+            "zero_cross_time_ms": zero.get("zero_cross_time_ms"),
+            "zero_cross_abs_rate_dps": zero.get("zero_cross_abs_rate_dps"),
+            "physical_next_peak_side": zero.get("physical_next_peak_side"),
+            "previous_peak_amplitude_deg": zero.get("previous_peak_amplitude_deg"),
+            "target_peak_deg": zero.get("target_peak_deg"),
+            "predicted_next_peak_amplitude_deg": predicted,
+            "actual_next_peak_amplitude_deg": actual,
+            "prediction_error_deg": actual - predicted if actual is not None and predicted is not None else None,
+            "q_command_mA_s": zero.get("q_command_mA_s"),
+            "q_effective_pred_mA_s": zero.get("q_effective_pred_mA_s"),
+            "q_meas_observed_mA_s": peak.get("q_meas_observed_mA_s"),
+            "q_meas_observed_valid": peak.get("q_meas_observed_valid"),
+            "q_command_direction": zero.get("q_command_direction"),
+            "vbat_mV": zero.get("vbat_mV"),
+            "i0_estimated_mA": i0,
+            "pre_measured_current_mA": pre_current,
+            "pre_current_minus_i0_mA": pre_current - i0 if pre_current is not None and i0 is not None else None,
+            "pre_current_age_us": zero.get("pre_current_age_us"),
+            "pre_current_valid": zero.get("pre_current_valid"),
+            "pre_wheel_speed_rpm": pre_speed,
+            "pre_wheel_speed_aligned_rpm": pre_speed * direction if pre_speed is not None and direction is not None else None,
+            "pre_wheel_speed_age_us": zero.get("pre_wheel_speed_age_us"),
+            "pre_wheel_speed_valid": zero.get("pre_wheel_speed_valid"),
+            "post_pulse_wheel_speed_rpm": post_speed,
+            "post_pulse_wheel_speed_valid": peak.get("post_pulse_wheel_speed_valid"),
+            "post_pulse_wheel_speed_capture_delay_us": peak.get("post_pulse_wheel_speed_capture_delay_us"),
+            "delta_wheel_speed_rpm": post_speed - pre_speed if post_speed is not None and pre_speed is not None else None,
+            "pulse_width_ms": zero.get("pulse_width_ms"),
+            "output_executed": zero.get("output_executed"),
+            "peak_time_ms": peak.get("peak_time_ms"),
+        }
+        rows.append(row)
+
+    with (out_dir / "energy_control_repeatability_events.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=REPEATABILITY_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+    return len(rows)
 
 
 def write_energy_control_autonomous_events(metadata: dict, out_dir: Path) -> tuple[int, int]:
@@ -1044,6 +1140,7 @@ def convert(path: Path, out_dir: Path) -> None:
     q_ident_event_count = write_q_ident_events(metadata, out_dir)
     energy_control_v0_event_count = write_energy_control_v0_events(metadata, out_dir)
     autonomous_peak_count, autonomous_zero_cross_count = write_energy_control_autonomous_events(metadata, out_dir)
+    repeatability_event_count = write_energy_control_repeatability_events(metadata, out_dir)
 
     with (out_dir / "header.json").open("w", encoding="utf-8") as f:
         json.dump({k: v for k, v in header.items() if not k.startswith("reserved")}, f, indent=2)
@@ -1075,11 +1172,13 @@ def convert(path: Path, out_dir: Path) -> None:
         print(f"energy_control_autonomous_peak_events={autonomous_peak_count}")
     if autonomous_zero_cross_count:
         print(f"energy_control_autonomous_zero_cross_events={autonomous_zero_cross_count}")
+    if repeatability_event_count:
+        print(f"energy_control_repeatability_events={repeatability_event_count}")
     print(f"wrote={out_dir}")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Convert supported RWLOG v23-v50 files to CSV, including control and diagnostic metadata events.")
+    parser = argparse.ArgumentParser(description="Convert supported RWLOG v23-v51 files to CSV, including control, repeatability and diagnostic metadata events.")
     parser.add_argument("rwlog", type=Path)
     parser.add_argument("--out", type=Path, default=Path("converted_dynamic_beta_hold73_tau73_compare"))
     args = parser.parse_args()

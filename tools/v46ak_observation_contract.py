@@ -49,6 +49,12 @@ def normalize_roller_cpp(text: str) -> str:
         "",
         text,
     )
+    text = text.replace(
+        "  bool ok = current_already_fresh || readCurrentFresh(command_mA_ != 0);\n\n"
+        "  ok &= readI32(REG_VIN, vin_raw);",
+        "  bool ok = current_already_fresh || readCurrentFresh(command_mA_ != 0);\n"
+        "  ok &= readI32(REG_VIN, vin_raw);",
+    )
     text = re.sub(
         r"\nbool Roller485Manager::readSpeedFresh\(\) \{.*?\n"
         r"void Roller485Manager::recordSpeedReadFailure\(\) \{.*?\n\}\n",

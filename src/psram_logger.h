@@ -247,6 +247,17 @@ class PsramLogger {
     float q_effective_pred_mA_s = NAN;
     uint16_t vbat_mV = 0;
     float i0_estimated_mA = NAN;
+    // V46ak pre-input state snapshot. These values are never read by control.
+    float pre_measured_current_mA = NAN;
+    uint32_t pre_current_sample_time_us = 0;
+    uint32_t pre_current_age_us = UINT32_MAX;
+    uint32_t pre_current_sequence = 0;
+    bool pre_current_valid = false;
+    float pre_wheel_speed_rpm = NAN;
+    uint32_t pre_wheel_speed_sample_time_us = 0;
+    uint32_t pre_wheel_speed_age_us = UINT32_MAX;
+    uint32_t pre_wheel_speed_sequence = 0;
+    bool pre_wheel_speed_valid = false;
     float solver_required_width_ms = NAN;
     uint16_t solver_selected_integer_width_ms = 0;
     uint16_t pulse_width_guard_max_ms = 0;
@@ -313,6 +324,16 @@ class PsramLogger {
     bool first_peak = false;
     bool pending_command_matched = false;
     float pending_q_command_mA_s = NAN;
+    // V46ak outcome fields; diagnostic-only and linked to the source zero-cross.
+    uint16_t source_zero_cross_event_index = 0;
+    bool source_output_executed = false;
+    float q_meas_observed_mA_s = NAN;
+    bool q_meas_observed_valid = false;
+    float post_pulse_wheel_speed_rpm = NAN;
+    uint32_t post_pulse_wheel_speed_sample_time_us = 0;
+    uint32_t post_pulse_wheel_speed_sequence = 0;
+    uint32_t post_pulse_wheel_speed_capture_delay_us = 0;
+    bool post_pulse_wheel_speed_valid = false;
     bool antiwindup_upper_hold = false;
     bool antiwindup_lower_hold = false;
   };
@@ -541,6 +562,10 @@ class PsramLogger {
     bool complete = false;
   };
   void addEnergyControlAutonomousZeroCrossEvent(const EnergyControlAutonomousZeroCrossEvent& event);
+  uint16_t nextEnergyControlAutonomousZeroCrossEventIndex() const {
+    return energy_control_autonomous_zero_cross_event_count_ < kMaxEnergyControlAutonomousEvents
+        ? static_cast<uint16_t>(energy_control_autonomous_zero_cross_event_count_ + 1U) : 0U;
+  }
   void addSolverShadowEvent(const SolverShadowEvent& event);
   void addSolverAuditEvent(const solver_audit::Record& event) { if (solver_audit_) solver_audit_->push(event); }
   void addTimingProbeEvent(const TimingProbeEvent& event);

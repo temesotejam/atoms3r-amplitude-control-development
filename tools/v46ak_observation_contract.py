@@ -25,7 +25,7 @@ def normalize_roller_h(text: str) -> str:
         r"  uint32_t speed_sequence = 0;\n"
         r"  uint32_t speed_read_failure_count = 0;\n"
         r"  bool speed_valid = false;\n",
-        "\n",
+        "",
         text,
     )
     text = text.replace("  bool readSpeedFresh();\n", "")
@@ -46,7 +46,7 @@ def normalize_roller_cpp(text: str) -> str:
         r"  if \(command_mA_ == 0 && requested_current_mA_ == 0\) \{\n"
         r"    readSpeedFresh\(\);\n"
         r"  \}\n",
-        "\n",
+        "",
         text,
     )
     text = re.sub(

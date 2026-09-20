@@ -69,7 +69,14 @@ struct ExperimentRunner {
 ENUMS
 FIELDS
   struct Status { bool pulse_active=false; float mekf_bias_y_dps=0;
-    float pitch_mekf_measurement_relative_deg=0, pitch_mekf_detector_relative_deg=0; } status_;
+    float pitch_mekf_measurement_relative_deg=0, pitch_mekf_detector_relative_deg=0;
+    float roller_q_meas_observed_mA_s=NAN;
+    bool roller_q_meas_observed_valid=false;
+    float roller_pulse_end_wheel_speed_rpm=NAN;
+    uint32_t roller_pulse_end_wheel_speed_sample_time_us=0;
+    uint32_t roller_pulse_end_wheel_speed_sequence=0;
+    uint32_t roller_pulse_end_wheel_speed_capture_delay_us=0;
+    bool roller_pulse_end_wheel_speed_valid=false; } status_;
   Imu* imu_; PsramLogger* logger_; uint32_t run_start_ms_=0;
   int stops=0, crosses=0; float last_cross_rate=0;
   void requestEmergencyStop(const char*){++stops;status_.pulse_active=false;}

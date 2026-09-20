@@ -77,7 +77,7 @@ def normalize_runner(data: str) -> str:
         end = data.find('  const ImuReading& r = imu_->reading();\n', start)
         if end < 0:
             raise ValueError('V46ak runner snapshot boundary changed')
-        data = data[:start] + data[end:]
+        data = data[:start] + '\n' + data[end:]
 
     data = data.replace(
         '  energy_control_autonomous_pending_output_executed_ = false;\n',

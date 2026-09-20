@@ -36,7 +36,7 @@ def normalize_roller_cpp(data: str) -> str:
         '',
     )
     data = data.replace(
-        '\n  // V46ak: observation only. Do not add speed-read success to the mandatory\n'
+        '\n\n  // V46ak: observation only. Do not add speed-read success to the mandatory\n'
         '  // Roller health gate, and do not perform this extra I2C read during a pulse.\n'
         '  if (command_mA_ == 0) readSpeedFresh(false);',
         '',

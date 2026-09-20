@@ -1499,9 +1499,11 @@ String PsramLogger::buildMetadataJson() const {
     else detail += ",\"pending_q_command_mA_s\":null";
     detail += ",\"source_zero_cross_event_index\":" + String(e.source_zero_cross_event_index);
     detail += ",\"source_output_executed\":" + String(e.source_output_executed ? "true" : "false");
-    appendAutonomousNullable("q_meas_observed_mA_s", e.q_meas_observed_mA_s, 6);
+    if (isfinite(e.q_meas_observed_mA_s)) detail += ",\"q_meas_observed_mA_s\":" + String(e.q_meas_observed_mA_s, 6);
+    else detail += ",\"q_meas_observed_mA_s\":null";
     detail += ",\"q_meas_observed_valid\":" + String(e.q_meas_observed_valid ? "true" : "false");
-    appendAutonomousNullable("post_pulse_wheel_speed_rpm", e.post_pulse_wheel_speed_rpm, 2);
+    if (isfinite(e.post_pulse_wheel_speed_rpm)) detail += ",\"post_pulse_wheel_speed_rpm\":" + String(e.post_pulse_wheel_speed_rpm, 2);
+    else detail += ",\"post_pulse_wheel_speed_rpm\":null";
     detail += ",\"post_pulse_wheel_speed_sample_time_us\":" + String(e.post_pulse_wheel_speed_sample_time_us);
     detail += ",\"post_pulse_wheel_speed_sequence\":" + String(e.post_pulse_wheel_speed_sequence);
     detail += ",\"post_pulse_wheel_speed_capture_delay_us\":" +

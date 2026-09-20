@@ -414,6 +414,11 @@ String WebUi::statusJson() const {
   json += ",\"imu_ok\":" + String(imu_->ok() ? "true" : "false");
   json += ",\"roller_ok\":" + String(roller_->ok() ? "true" : "false");
   json += ",\"roller_actual_current_mA\":" + String(roller.actual_current_mA);
+  json += ",\"roller_wheel_speed_rpm\":" + String(roller.wheel_speed_rpm);
+  json += ",\"roller_wheel_speed_valid\":" + String(roller.wheel_speed_valid ? "true" : "false");
+  json += ",\"roller_wheel_speed_sample_time_us\":" + String(roller.wheel_speed_sample_time_us);
+  json += ",\"roller_wheel_speed_sequence\":" + String(roller.wheel_speed_sequence);
+  json += ",\"roller_wheel_speed_read_failure_count\":" + String(roller.wheel_speed_read_failure_count);
   json += ",\"roller_io_task_running\":" + String(roller.io_task_running ? "true" : "false");
   json += ",\"roller_io_task_ready\":" + String(roller.io_task_ready ? "true" : "false");
   json += ",\"roller_io_task_init_failed\":" + String(roller.io_task_init_failed ? "true" : "false");

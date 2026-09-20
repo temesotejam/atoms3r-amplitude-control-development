@@ -26,12 +26,12 @@ struct RollerTelemetry {
   bool current_valid = false;
   bool q_meas_observed_valid = false;
   // V46ak observation-only wheel-speed telemetry. Never used by control.
-  int32_t wheel_speed_rpm = 0;
+  float wheel_speed_rpm = NAN;
   uint32_t wheel_speed_sample_time_us = 0;
   uint32_t wheel_speed_sequence = 0;
   uint32_t wheel_speed_read_failure_count = 0;
   bool wheel_speed_valid = false;
-  int32_t pulse_end_wheel_speed_rpm = 0;
+  float pulse_end_wheel_speed_rpm = NAN;
   uint32_t pulse_end_wheel_speed_sample_time_us = 0;
   uint32_t pulse_end_wheel_speed_sequence = 0;
   uint32_t pulse_end_wheel_speed_capture_delay_us = 0;

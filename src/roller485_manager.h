@@ -25,6 +25,17 @@ struct RollerTelemetry {
   float q_meas_observed_mA_s = NAN;
   bool current_valid = false;
   bool q_meas_observed_valid = false;
+  // V46ak observation-only wheel-speed telemetry. Never used by control.
+  float wheel_speed_rpm = NAN;
+  uint32_t wheel_speed_sample_time_us = 0;
+  uint32_t wheel_speed_sequence = 0;
+  uint32_t wheel_speed_read_failure_count = 0;
+  bool wheel_speed_valid = false;
+  float pulse_end_wheel_speed_rpm = NAN;
+  uint32_t pulse_end_wheel_speed_sample_time_us = 0;
+  uint32_t pulse_end_wheel_speed_sequence = 0;
+  uint32_t pulse_end_wheel_speed_capture_delay_us = 0;
+  bool pulse_end_wheel_speed_valid = false;
 
   // V46j task-split diagnostics. These are status-only and do not alter RWLOG v46.
   bool io_task_running = false;
@@ -77,6 +88,7 @@ private:
   bool readI32(uint8_t reg, int32_t& value);
   bool readU8(uint8_t reg, uint8_t& value);
   bool readCurrentFresh(bool audit_sample);
+  bool readSpeedFresh(bool pulse_end_capture);
   void recordFreshCurrent(int32_t current_raw, uint32_t sample_time_us, bool audit_sample);
   void recordCurrentReadFailure(bool audit_sample);
   void beginCurrentAuditPulse();

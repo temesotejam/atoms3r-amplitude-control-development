@@ -5,9 +5,20 @@ from v46ac_delay_comp_contract import normalize_config as normalize_v46ac_config
 from v46ab_no_prediction_contract import normalize_config as normalize_v46ab_config
 from v46aa_control_zero_contract import normalize_log_types as normalize_v46aa_log_types
 from v46z_comparison_zero_contract import normalize_log_types as normalize_v46z_log_types
+from v46ak_repeatability_contract import (
+    normalize_config as normalize_v46ak_config,
+    normalize_roller_h as normalize_v46ak_roller_h,
+    normalize_roller_cpp as normalize_v46ak_roller_cpp,
+)
 ROOT=Path(__file__).resolve().parents[1]
 def original_timing_file(path):
     data=(ROOT/path).read_text()
+    if path == 'src/config.h':
+        data=normalize_v46ak_config(data)
+    elif path == 'src/roller485_manager.h':
+        data=normalize_v46ak_roller_h(data)
+    elif path == 'src/roller485_manager.cpp':
+        data=normalize_v46ak_roller_cpp(data)
     if path == 'src/config.h':
         data=normalize_v46ac_config(data)
         data=normalize_v46ab_config(data)

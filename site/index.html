@@ -4,24 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>AtomS3R Amplitude Control Development — V46aj baseline</title>
+  <title>AtomS3R V46ak Repeatability Observation</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46aj BASELINE</p>
-      <h1>Amplitude Control Development<br><span>Baseline Web Flasher</span></h1>
-      <p class="lead">振幅制御開発の出発点として、検証済みのV46aj / 0.46.35をそのまま配布するベースラインです。開始姿勢を0°としたMEKF角度を使い、ゼロクロスには3 msの遅延補償を適用します。</p>
+      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46ak OBSERVATION</p>
+      <h1>Next-Peak Repeatability<br><span>Observation Web Flasher</span></h1>
+      <p class="lead">V46ajの姿勢推定・3 ms補償・制御則を変えず、入力直前の実電流とホイール速度、入力後の実Qとホイール速度を追加記録する観測版です。</p>
       <div class="badges"><span>ESP32-S3</span><span>BMI270 400/200 Hz</span><span>RWLOG v51</span><span>MEKF amplitude</span><span>3 ms compensation</span></div>
     </header>
     <section class="panel important">
-      <h2>開発ベースライン：V46aj / 0.46.35</h2>
-      <p>このページが現在書き込むのは、元の姿勢推定検証リポジトリから未変更で移したV46ajです。遅延補償は3 ms固定で、次ピークの予測には最初のZEROクロスから角速度式を使います。</p>
+      <h2>V46ak / 0.46.36：再現性観測版</h2>
+      <p>制御の基準はV46ajのままです。MEKF、3 ms固定ZEROクロス補償、rate-only次ピーク予測、Qゲイン、Ki、300 mA・最大100 msの出力条件には変更を加えていません。</p>
       <p><strong>測定条件：遅延補償3 ms固定・目標8°・30秒。</strong>開始姿勢と撮影条件をそろえてください。補償時間の設定は不要です。各Run終了後、<strong>次の開始前にRWLOGと動画を保存</strong>してください。</p>
-      <p>300 mA・最大100 ms、起動パルス、非常停止、IMU取得、LED同期は維持しています。目標8°への振幅が改善するかを実機で確認する試験版です。</p>
-      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AJ_FIXED_3MS.md">3 ms固定化の変更内容・測定手順</a></p>
+      <p><strong>追加したのは観測だけです。</strong>入力直前の推定I0・実測電流・ホイール速度と鮮度、入力後の実測Q・ホイール速度を次ピークへ紐付けます。ホイール速度や実測電流は制御判断には使いません。</p>
+      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AJ_FIXED_3MS.md">V46ajの3 ms固定化</a></p>
       <p>公開ビルド：<code id="build-sha">取得中</code><br><a href="build-sha.txt">ビルドSHAを確認</a> / <a href="firmware/SHA256SUMS.txt">ファームウェアのSHA-256</a></p>
     </section>
 
@@ -29,7 +29,7 @@
       <h2>このページから直接書き込めます</h2>
       <p>AtomS3R を USB でPCへ接続し、Chrome または Edge のデスクトップ版で下のボタンを押してください。</p>
       <esp-web-install-button manifest="manifest.json">
-        <button slot="activate" class="primary">AtomS3RへV46ajを書き込む</button>
+        <button slot="activate" class="primary">AtomS3RへV46akを書き込む</button>
         <span slot="unsupported" class="warning">このブラウザはWeb Serial / WebUSBに対応していません。PC版ChromeまたはEdgeを使用してください。</span>
       </esp-web-install-button>
       <details>
@@ -77,11 +77,11 @@
 
     <section class="panel safety">
       <h2>実機動作について</h2>
-      <p>このV46ajはモータを実際に駆動します。可動部から手・ケーブル・治具を離し、異常時は実験画面の <strong>Emergency stop</strong> を使用してください。</p>
-      <p>Attitude revision: <code>v46aj_fixed_3ms_compensation_20260920</code></p>
+      <p>このV46akはV46ajと同じ制御でモータを実際に駆動します。可動部から手・ケーブル・治具を離し、異常時は実験画面の <strong>Emergency stop</strong> を使用してください。</p>
+      <p>Attitude/control baseline: <code>v46aj_fixed_3ms_compensation_20260920</code><br>Observation revision: <code>v46ak_repeatability_observation_20260920</code></p>
     </section>
 
-    <footer>atoms3r-amplitude-control-development / V46aj baseline</footer>
+    <footer>atoms3r-amplitude-control-development / V46ak observation</footer>
   </main>
   <script>
     fetch('build-sha.txt', {cache: 'no-store'})

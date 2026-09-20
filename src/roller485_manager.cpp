@@ -11,6 +11,8 @@ static constexpr uint8_t REG_ERROR_CODE = 0x0D;
 static constexpr uint8_t REG_VIN = 0x34;
 static constexpr uint8_t REG_CURRENT = 0xB0;
 static constexpr uint8_t REG_CURRENT_READBACK = 0xC0;
+// Official Unit Roller485 I2C speed readback register; signed value is RPM * 100.
+static constexpr uint8_t REG_SPEED_READBACK = 0x60;
 
 bool Roller485Manager::begin() {
   // V46j: do not touch Wire from the Arduino/control core. Core 0 will own the
@@ -248,6 +250,10 @@ void Roller485Manager::update() {
   telemetry_.error_raw = error;
   telemetry_.roller_ok = error == 0;
   last_error_ = error == 0 ? "" : "roller_error_raw";
+
+  // V46ak: observation only. Do not add speed-read success to the mandatory
+  // Roller health gate, and do not perform this extra I2C read during a pulse.
+  if (command_mA_ == 0) readSpeedFresh(false);
 }
 
 bool Roller485Manager::setCurrentMa(int16_t current_mA) {
@@ -321,8 +327,17 @@ bool Roller485Manager::applyCurrentMa(const RollerCommand& cmd) {
   telemetry_.mode_raw = Config::ROLLER_MODE_CURRENT;
   telemetry_.output_raw = cmd.current_mA == 0 ? 0 : 1;
   telemetry_.applied_current_mA = cmd.current_mA;
-  if (!was_commanded && cmd.current_mA != 0) beginCurrentAuditPulse();
-  else if (was_commanded && cmd.current_mA == 0) endCurrentAuditPulse();
+  if (!was_commanded && cmd.current_mA != 0) {
+    beginCurrentAuditPulse();
+  } else if (was_commanded && cmd.current_mA == 0) {
+    endCurrentAuditPulse();
+    // Capture one post-pulse speed sample only after the stop command has
+    // already been applied. Failure is diagnostic-only and cannot fail stop.
+    if (readSpeedFresh(true) && telemetry_.pulse_end_wheel_speed_sample_time_us != 0) {
+      telemetry_.pulse_end_wheel_speed_capture_delay_us =
+          static_cast<uint32_t>(telemetry_.pulse_end_wheel_speed_sample_time_us - applied_us);
+    }
+  }
   last_error_ = "";
   publishTelemetry();
   return true;
@@ -366,6 +381,29 @@ bool Roller485Manager::readCurrentFresh(bool audit_sample) {
   if (audit_sample) telemetry_.pulse_current_read_work.add(
       static_cast<uint32_t>(micros() - timing_start), 2000);
   recordFreshCurrent(current_raw, micros(), audit_sample);
+  return true;
+}
+
+bool Roller485Manager::readSpeedFresh(bool pulse_end_capture) {
+  int32_t speed_raw = 0;
+  if (!readI32(REG_SPEED_READBACK, speed_raw)) {
+    ++telemetry_.wheel_speed_read_failure_count;
+    telemetry_.wheel_speed_valid = false;
+    if (pulse_end_capture) telemetry_.pulse_end_wheel_speed_valid = false;
+    return false;
+  }
+  const uint32_t sample_time_us = micros();
+  telemetry_.wheel_speed_rpm = static_cast<float>(speed_raw) / 100.0f;
+  telemetry_.wheel_speed_sample_time_us = sample_time_us;
+  ++telemetry_.wheel_speed_sequence;
+  telemetry_.wheel_speed_valid = true;
+  if (pulse_end_capture) {
+    telemetry_.pulse_end_wheel_speed_rpm = telemetry_.wheel_speed_rpm;
+    telemetry_.pulse_end_wheel_speed_sample_time_us = sample_time_us;
+    telemetry_.pulse_end_wheel_speed_sequence = telemetry_.wheel_speed_sequence;
+    telemetry_.pulse_end_wheel_speed_capture_delay_us = 0;
+    telemetry_.pulse_end_wheel_speed_valid = true;
+  }
   return true;
 }
 

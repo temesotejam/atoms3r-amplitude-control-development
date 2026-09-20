@@ -1,5 +1,32 @@
 # AtomS3R Amplitude Control Development
 
+## Current development firmware: V46ak / 0.46.36 — repeatability observation only
+
+V46akは、**V46ajの姿勢推定・3 ms補償・次ピーク予測・Q決定・Ki・出力条件を変更せず**、
+次ピーク再現性を調べるための観測だけを追加した版です。
+
+追加観測:
+- ZEROクロス判断直前の推定 `I0` と、直近の実測電流・サンプルage
+- ZEROクロス判断直前のホイール速度・サンプルage
+- 指令Q、予測Q、パルス幅、Vbat
+- パルス中の既存実電流監査から得る観測Q
+- 停止指令適用後のホイール速度
+- 上記入力状態と、その次に確定した実ピークの1対1対応
+
+変えていないもの:
+- 6-state MEKFと姿勢初期化
+- MEKFの軸・0.908911ジャイロ感度補正
+- ZEROクロス用3 ms固定補償
+- rate-only次ピーク基準モデル
+- Qゲイン、Ki=0.10
+- 300 mA、最大100 ms、START_KICK、ESTOPなどの出力・安全条件
+- RWLOG v51のバイナリ時系列レイアウト
+
+CSV変換後は `energy_control_repeatability_events.csv` に、
+**「入力直前状態 → 実入力 → 次ピーク」** が1イベント1行で出力されます。
+
+詳細: [V46ak 再現性観測版](docs/V46AK_REPEATABILITY_OBSERVATION.md)
+
 AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を進めるための開発リポジトリです。
 
 このリポジトリは、姿勢推定・計測系の検証を行った
@@ -54,8 +81,7 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現時点では、**未変更のV46aj / 0.46.35ベースライン**を書き込みます。
-今後ファームウェアを更新した場合は、バージョン・変更内容・実験条件をこのリポジトリ側で更新します。
+現在のWeb flasherは **V46ak / 0.46.36** を書き込みます。制御内容はV46ajのままで、再現性確認用の観測だけを追加しています。
 
 ---
 

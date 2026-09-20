@@ -128,6 +128,22 @@ void ExperimentRunner::update() {
   const RollerTelemetry roller_snapshot = roller_->telemetrySnapshot();
   status_.roller_actual_current_mA = roller_snapshot.actual_current_mA;
   status_.roller_battery_mV = roller_snapshot.battery_mV;
+  // V46ak: copy the already-published Core0 snapshot once per control update.
+  // These fields are logging-only and are never used to select a pulse.
+  status_.roller_current_sample_time_us = roller_snapshot.current_sample_time_us;
+  status_.roller_current_sequence = roller_snapshot.current_sequence;
+  status_.roller_current_valid = roller_snapshot.current_valid;
+  status_.roller_q_meas_observed_mA_s = roller_snapshot.q_meas_observed_mA_s;
+  status_.roller_q_meas_observed_valid = roller_snapshot.q_meas_observed_valid;
+  status_.roller_wheel_speed_rpm = roller_snapshot.wheel_speed_rpm;
+  status_.roller_wheel_speed_sample_time_us = roller_snapshot.wheel_speed_sample_time_us;
+  status_.roller_wheel_speed_sequence = roller_snapshot.wheel_speed_sequence;
+  status_.roller_wheel_speed_valid = roller_snapshot.wheel_speed_valid;
+  status_.roller_pulse_end_wheel_speed_rpm = roller_snapshot.pulse_end_wheel_speed_rpm;
+  status_.roller_pulse_end_wheel_speed_sample_time_us = roller_snapshot.pulse_end_wheel_speed_sample_time_us;
+  status_.roller_pulse_end_wheel_speed_sequence = roller_snapshot.pulse_end_wheel_speed_sequence;
+  status_.roller_pulse_end_wheel_speed_capture_delay_us = roller_snapshot.pulse_end_wheel_speed_capture_delay_us;
+  status_.roller_pulse_end_wheel_speed_valid = roller_snapshot.pulse_end_wheel_speed_valid;
 
   const ImuReading& r = imu_->reading();
   if (r.gyro_sequence != 0 && r.gyro_sequence != last_imu_update_us_) {
@@ -2234,6 +2250,7 @@ void ExperimentRunner::resetEnergyControlAutonomous() {
   energy_control_autonomous_pending_saturated_upper_ = false;
   energy_control_autonomous_pending_saturated_lower_ = false;
   energy_control_autonomous_pending_zero_event_index_ = 0;
+  energy_control_autonomous_pending_output_executed_ = false;
 }
 
 void ExperimentRunner::resetEnergyControlAutonomousPeakTracker(bool enable) {
@@ -2516,6 +2533,24 @@ bool ExperimentRunner::recordEnergyControlAutonomousPeak(uint32_t peak_ms, int8_
       physical_side == energy_control_autonomous_pending_next_side_;
   event.pending_q_command_mA_s = event.pending_command_matched
       ? energy_control_autonomous_pending_q_command_mA_s_ : NAN;
+  event.source_zero_cross_event_index = event.pending_command_matched
+      ? energy_control_autonomous_pending_zero_event_index_ : 0;
+  event.source_output_executed = event.pending_command_matched &&
+      energy_control_autonomous_pending_output_executed_;
+  if (event.source_output_executed) {
+    event.q_meas_observed_valid = status_.roller_q_meas_observed_valid;
+    event.q_meas_observed_mA_s = event.q_meas_observed_valid
+        ? status_.roller_q_meas_observed_mA_s : NAN;
+    event.post_pulse_wheel_speed_valid = status_.roller_pulse_end_wheel_speed_valid;
+    event.post_pulse_wheel_speed_rpm = event.post_pulse_wheel_speed_valid
+        ? static_cast<float>(status_.roller_pulse_end_wheel_speed_rpm) : NAN;
+    event.post_pulse_wheel_speed_sample_time_us =
+        status_.roller_pulse_end_wheel_speed_sample_time_us;
+    event.post_pulse_wheel_speed_sequence =
+        status_.roller_pulse_end_wheel_speed_sequence;
+    event.post_pulse_wheel_speed_capture_delay_us =
+        status_.roller_pulse_end_wheel_speed_capture_delay_us;
+  }
   event.antiwindup_upper_hold = event.pending_command_matched &&
       energy_control_autonomous_pending_saturated_upper_ && event.peak_error_deg > 0.0f;
   event.antiwindup_lower_hold = event.pending_command_matched &&
@@ -2760,6 +2795,27 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   event.command_matches_zero_cross_motion =
       event.q_command_direction == event.physical_next_peak_side;
   event.vbat_mV = status_.roller_battery_mV;
+  // V46ak repeatability audit: snapshot only. All values were published by
+  // Core0 before this control update; no Roller I2C transaction occurs here.
+  const uint32_t v46ak_observation_now_us = micros();
+  event.pre_current_sample_time_us = status_.roller_current_sample_time_us;
+  event.pre_current_sequence = status_.roller_current_sequence;
+  event.pre_current_valid = status_.roller_current_valid &&
+      event.pre_current_sample_time_us != 0;
+  event.pre_current_age_us = event.pre_current_valid
+      ? static_cast<uint32_t>(v46ak_observation_now_us - event.pre_current_sample_time_us)
+      : UINT32_MAX;
+  event.pre_measured_current_mA = event.pre_current_valid
+      ? static_cast<float>(status_.roller_actual_current_mA) : NAN;
+  event.pre_wheel_speed_sample_time_us = status_.roller_wheel_speed_sample_time_us;
+  event.pre_wheel_speed_sequence = status_.roller_wheel_speed_sequence;
+  event.pre_wheel_speed_valid = status_.roller_wheel_speed_valid &&
+      event.pre_wheel_speed_sample_time_us != 0;
+  event.pre_wheel_speed_age_us = event.pre_wheel_speed_valid
+      ? static_cast<uint32_t>(v46ak_observation_now_us - event.pre_wheel_speed_sample_time_us)
+      : UINT32_MAX;
+  event.pre_wheel_speed_rpm = event.pre_wheel_speed_valid
+      ? static_cast<float>(status_.roller_wheel_speed_rpm) : NAN;
   const uint32_t v46l_free_model_t0_us = micros();
   // V46ai: only the current interpolated crossing rate and its physical side
   // determine the free peak. There is no previous-amplitude P1 calculation.
@@ -2994,9 +3050,14 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   energy_control_autonomous_pending_q_command_mA_s_ = selected_q_mA_s;
   energy_control_autonomous_pending_saturated_upper_ = event.q_saturated_upper;
   energy_control_autonomous_pending_saturated_lower_ = event.q_saturated_lower;
+  energy_control_autonomous_pending_zero_event_index_ = 0;
+  energy_control_autonomous_pending_output_executed_ = false;
   if (selected_width_ms == 0) {
     event.valid = true;
     event.reason = Config::ENERGY_CONTROL_AUTONOMOUS_REASON_VALID_NO_OUTPUT;
+    energy_control_autonomous_pending_zero_event_index_ =
+        logger_->nextEnergyControlAutonomousZeroCrossEventIndex();
+    energy_control_autonomous_pending_output_executed_ = false;
     logger_->addEnergyControlAutonomousZeroCrossEvent(event);
     rearm_for_next_peak();
     return;
@@ -3036,6 +3097,9 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   event.output_executed = true;
   event.valid = true;
   event.reason = Config::ENERGY_CONTROL_AUTONOMOUS_REASON_NONE;
+  energy_control_autonomous_pending_zero_event_index_ =
+      logger_->nextEnergyControlAutonomousZeroCrossEventIndex();
+  energy_control_autonomous_pending_output_executed_ = true;
   logger_->addEnergyControlAutonomousZeroCrossEvent(event);
 }
 void ExperimentRunner::runEnergyControlAutonomousSolverShadow() {

@@ -44,11 +44,21 @@ def main() -> None:
     assert "readI32(REG_CURRENT_READBACK" in roller
     assert "readCurrentFresh(true)" in roller
 
-    # Q_meas is emitted only as a telemetry field. No runner controller method
-    # is allowed to use it for pulse selection or stopping.
+    # Q_meas remains observational. V46ak is allowed to copy it into the
+    # matched peak event after the pulse, but the zero-cross Q selector and
+    # physical pulse-start path must not read it.
     assert "roller_q_meas_observed_mAms" in runner
-    pre_log_controller = runner.split("void ExperimentRunner::logSampleNow()", 1)[0]
-    assert "q_meas_observed" not in pre_log_controller
+    zero_cross = runner.split(
+        "void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross", 1
+    )[1].split("void ExperimentRunner::runEnergyControlAutonomousSolverShadow", 1)[0]
+    pulse_start = runner.split(
+        "bool ExperimentRunner::beginEnergyControlAutonomousPulse", 1
+    )[1].split("bool ExperimentRunner::beginEnergyControlAutonomousStartKickPulse", 1)[0]
+    assert "q_meas_observed" not in zero_cross
+    assert "q_meas_observed" not in pulse_start
+    assert "q_meas_observed" in runner.split(
+        "bool ExperimentRunner::recordEnergyControlAutonomousPeak", 1
+    )[1].split("void ExperimentRunner::updateEnergyControlAutonomousPeakTracker", 1)[0]
 
     # V46 attitude adoption: MEKF is the only control/detector attitude in the
     # autonomous path; the adopted hold-073 dynamic-beta Madgwick remains online

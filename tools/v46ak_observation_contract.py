@@ -4,7 +4,7 @@ import re
 def normalize_runner(text: str) -> str:
     return re.sub(
         r"\n  // V46ak observation-only pre-input snapshot\..*?\n  }\n\n(?=  event\.q_available_mA_s)",
-        "\n",
+        "",
         text,
         flags=re.S,
     )

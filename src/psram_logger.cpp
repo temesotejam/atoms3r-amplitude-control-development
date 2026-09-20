@@ -412,6 +412,8 @@ String PsramLogger::buildMetadataJson() const {
        (passive_capture_ ? "rwlog_passive_absolute_roll_free_decay" : "rwlog_dynamic_beta_vbat_hold_time_compare")))) + "\",";
   json += "\"firmware_revision\":\"" + String(Config::PASSIVE_CAPTURE_FIRMWARE_REVISION) + "\",";
   json += "\"attitude_validation_revision\":\"" + String(Config::ATTITUDE_VALIDATION_REVISION) + "\",";
+  json += "\"amplitude_control_observation_revision\":\"" + String(Config::AMPLITUDE_CONTROL_OBSERVATION_REVISION) + "\",";
+  json += "\"v46ak_pre_input_observation_semantics\":\"latest_independent_coast_current_and_speed_snapshots_captured_before_solver_and_command;speed_readback_register_0x60_x100_rpm;observation_only_never_read_by_control\",";
   json += "\"measurement_mode\":\"" + String(energy_control_autonomous_mode_ ? Config::ENERGY_CONTROL_AUTONOMOUS_MEASUREMENT_MODE :
       (energy_control_v0_mode_ ? Config::ENERGY_CONTROL_V0_MEASUREMENT_MODE :
       (q_ident_mode_ ? Config::Q_IDENT_MEASUREMENT_MODE :
@@ -1558,6 +1560,15 @@ String PsramLogger::buildMetadataJson() const {
         String(e.command_matches_zero_cross_motion ? "true" : "false");
     detail += ",\"vbat_mV\":" + String(e.vbat_mV);
     appendAutonomousNullable("i0_estimated_mA", e.i0_estimated_mA, 4);
+    detail += ",\"pre_input_capture_time_us\":" + String(e.pre_input_capture_time_us);
+    appendAutonomousNullable("pre_input_measured_current_mA", e.pre_input_measured_current_mA, 3);
+    detail += ",\"pre_input_current_sample_time_us\":" + String(e.pre_input_current_sample_time_us);
+    detail += ",\"pre_input_current_age_us\":" + String(e.pre_input_current_age_us);
+    detail += ",\"pre_input_current_valid\":" + String(e.pre_input_current_valid ? "true" : "false");
+    appendAutonomousNullable("pre_input_wheel_speed_rpm", e.pre_input_wheel_speed_rpm, 3);
+    detail += ",\"pre_input_wheel_speed_sample_time_us\":" + String(e.pre_input_wheel_speed_sample_time_us);
+    detail += ",\"pre_input_wheel_speed_age_us\":" + String(e.pre_input_wheel_speed_age_us);
+    detail += ",\"pre_input_wheel_speed_valid\":" + String(e.pre_input_wheel_speed_valid ? "true" : "false");
     appendAutonomousNullable("solver_required_width_ms", e.solver_required_width_ms, 4);
     detail += ",\"solver_selected_integer_width_ms\":" + String(e.solver_selected_integer_width_ms);
     detail += ",\"command_current_mA\":" + String(e.command_current_mA);

@@ -43,6 +43,21 @@ struct ExperimentStatus {
   uint8_t beta_model_vbat_status = 2;
   int16_t roller_actual_current_mA = 0;
   uint16_t roller_battery_mV = 0;
+  // V46ak observation-only actuator-state snapshot. Never read by control.
+  uint32_t roller_current_sample_time_us = 0;
+  uint32_t roller_current_sequence = 0;
+  bool roller_current_valid = false;
+  float roller_q_meas_observed_mA_s = NAN;
+  bool roller_q_meas_observed_valid = false;
+  int32_t roller_wheel_speed_rpm = 0;
+  uint32_t roller_wheel_speed_sample_time_us = 0;
+  uint32_t roller_wheel_speed_sequence = 0;
+  bool roller_wheel_speed_valid = false;
+  int32_t roller_pulse_end_wheel_speed_rpm = 0;
+  uint32_t roller_pulse_end_wheel_speed_sample_time_us = 0;
+  uint32_t roller_pulse_end_wheel_speed_sequence = 0;
+  uint32_t roller_pulse_end_wheel_speed_capture_delay_us = 0;
+  bool roller_pulse_end_wheel_speed_valid = false;
   // v45 current telemetry labels only; no control path reads these values.
   float current_audit_q_target_mA_s = NAN;
   float current_audit_q_pred_mA_s = NAN;
@@ -528,6 +543,7 @@ private:
   bool energy_control_autonomous_pending_saturated_upper_ = false;
   bool energy_control_autonomous_pending_saturated_lower_ = false;
   uint16_t energy_control_autonomous_pending_zero_event_index_ = 0;
+  bool energy_control_autonomous_pending_output_executed_ = false;
   PsramLogger::SolverShadowEvent solver_shadow_event_{};
   bool solver_shadow_pending_ = false;
   PsramLogger::TimingProbeEvent timing_probe_event_{};

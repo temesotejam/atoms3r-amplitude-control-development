@@ -2788,6 +2788,30 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   const uint32_t now_ms = run_start_ms_ + t_test_ms;
   event.i0_estimated_mA = predicted_current_end_ms_ == 0 ? 0.0f :
       predicted_signed_current_end_mA_ * expf(-static_cast<float>(now_ms - predicted_current_end_ms_) / 70.0f);
+
+  // V46ak observation-only pre-input snapshot. Capture the latest independently
+  // sampled Roller state before the pulse solver/command path. Nothing below
+  // reads these fields back into control.
+  const uint32_t pre_input_capture_us = micros();
+  event.pre_input_capture_time_us = pre_input_capture_us;
+  if (roller_) {
+    const RollerTelemetry pre_input = roller_->telemetrySnapshot();
+    event.pre_input_current_sample_time_us = pre_input.current_sample_time_us;
+    event.pre_input_current_age_us = pre_input.current_sample_time_us == 0
+        ? UINT32_MAX
+        : static_cast<uint32_t>(pre_input_capture_us - pre_input.current_sample_time_us);
+    event.pre_input_current_valid = pre_input.current_valid && pre_input.current_sample_time_us != 0;
+    event.pre_input_measured_current_mA = event.pre_input_current_valid
+        ? static_cast<float>(pre_input.actual_current_mA) : NAN;
+    event.pre_input_wheel_speed_sample_time_us = pre_input.speed_sample_time_us;
+    event.pre_input_wheel_speed_age_us = pre_input.speed_sample_time_us == 0
+        ? UINT32_MAX
+        : static_cast<uint32_t>(pre_input_capture_us - pre_input.speed_sample_time_us);
+    event.pre_input_wheel_speed_valid = pre_input.speed_valid && pre_input.speed_sample_time_us != 0;
+    event.pre_input_wheel_speed_rpm = event.pre_input_wheel_speed_valid
+        ? pre_input.speed_rpm : NAN;
+  }
+
   event.q_available_mA_s = fabsf(predictedChargeMaS(event.i0_estimated_mA,
       event.q_command_direction, static_cast<float>(Config::ENERGY_CONTROL_AUTONOMOUS_MAX_PULSE_MS),
       Config::ENERGY_CONTROL_AUTONOMOUS_CURRENT_MA));

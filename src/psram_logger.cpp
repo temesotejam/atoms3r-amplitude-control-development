@@ -412,6 +412,10 @@ String PsramLogger::buildMetadataJson() const {
        (passive_capture_ ? "rwlog_passive_absolute_roll_free_decay" : "rwlog_dynamic_beta_vbat_hold_time_compare")))) + "\",";
   json += "\"firmware_revision\":\"" + String(Config::PASSIVE_CAPTURE_FIRMWARE_REVISION) + "\",";
   json += "\"attitude_validation_revision\":\"" + String(Config::ATTITUDE_VALIDATION_REVISION) + "\",";
+  json += "\"amplitude_control_development_revision\":\"" +
+      String(Config::AMPLITUDE_CONTROL_DEVELOPMENT_REVISION) + "\",";
+  json += "\"v46ak_repeatability_observation_policy\":\"observation_only;control_estimator_timing_model_gains_Ki_and_output_envelope_unchanged;wheel_speed_never_authorizes_or_modifies_output\",";
+  json += "\"v46ak_wheel_speed_source\":\"Unit_Roller485_I2C_SPEED_READBACK_0x60_signed_RPM_x100;normal_read_only_while_command_is_zero;one_capture_after_stop_apply\",";
   json += "\"measurement_mode\":\"" + String(energy_control_autonomous_mode_ ? Config::ENERGY_CONTROL_AUTONOMOUS_MEASUREMENT_MODE :
       (energy_control_v0_mode_ ? Config::ENERGY_CONTROL_V0_MEASUREMENT_MODE :
       (q_ident_mode_ ? Config::Q_IDENT_MEASUREMENT_MODE :
@@ -1493,6 +1497,17 @@ String PsramLogger::buildMetadataJson() const {
     detail += ",\"pending_command_matched\":" + String(e.pending_command_matched ? "true" : "false");
     if (isfinite(e.pending_q_command_mA_s)) detail += ",\"pending_q_command_mA_s\":" + String(e.pending_q_command_mA_s, 5);
     else detail += ",\"pending_q_command_mA_s\":null";
+    detail += ",\"source_zero_cross_event_index\":" + String(e.source_zero_cross_event_index);
+    detail += ",\"source_output_executed\":" + String(e.source_output_executed ? "true" : "false");
+    appendAutonomousNullable("q_meas_observed_mA_s", e.q_meas_observed_mA_s, 6);
+    detail += ",\"q_meas_observed_valid\":" + String(e.q_meas_observed_valid ? "true" : "false");
+    appendAutonomousNullable("post_pulse_wheel_speed_rpm", e.post_pulse_wheel_speed_rpm, 2);
+    detail += ",\"post_pulse_wheel_speed_sample_time_us\":" + String(e.post_pulse_wheel_speed_sample_time_us);
+    detail += ",\"post_pulse_wheel_speed_sequence\":" + String(e.post_pulse_wheel_speed_sequence);
+    detail += ",\"post_pulse_wheel_speed_capture_delay_us\":" +
+        String(e.post_pulse_wheel_speed_capture_delay_us);
+    detail += ",\"post_pulse_wheel_speed_valid\":" +
+        String(e.post_pulse_wheel_speed_valid ? "true" : "false");
     detail += ",\"antiwindup_upper_hold\":" + String(e.antiwindup_upper_hold ? "true" : "false");
     detail += ",\"antiwindup_lower_hold\":" + String(e.antiwindup_lower_hold ? "true" : "false") + "}";
     if (!appendAutonomousDetail(detail, &has_rendered_peak_detail)) break;
@@ -1558,6 +1573,16 @@ String PsramLogger::buildMetadataJson() const {
         String(e.command_matches_zero_cross_motion ? "true" : "false");
     detail += ",\"vbat_mV\":" + String(e.vbat_mV);
     appendAutonomousNullable("i0_estimated_mA", e.i0_estimated_mA, 4);
+    appendAutonomousNullable("pre_measured_current_mA", e.pre_measured_current_mA, 3);
+    detail += ",\"pre_current_sample_time_us\":" + String(e.pre_current_sample_time_us);
+    detail += ",\"pre_current_age_us\":" + String(e.pre_current_age_us);
+    detail += ",\"pre_current_sequence\":" + String(e.pre_current_sequence);
+    detail += ",\"pre_current_valid\":" + String(e.pre_current_valid ? "true" : "false");
+    appendAutonomousNullable("pre_wheel_speed_rpm", e.pre_wheel_speed_rpm, 2);
+    detail += ",\"pre_wheel_speed_sample_time_us\":" + String(e.pre_wheel_speed_sample_time_us);
+    detail += ",\"pre_wheel_speed_age_us\":" + String(e.pre_wheel_speed_age_us);
+    detail += ",\"pre_wheel_speed_sequence\":" + String(e.pre_wheel_speed_sequence);
+    detail += ",\"pre_wheel_speed_valid\":" + String(e.pre_wheel_speed_valid ? "true" : "false");
     appendAutonomousNullable("solver_required_width_ms", e.solver_required_width_ms, 4);
     detail += ",\"solver_selected_integer_width_ms\":" + String(e.solver_selected_integer_width_ms);
     detail += ",\"command_current_mA\":" + String(e.command_current_mA);

@@ -333,7 +333,10 @@ bool Roller485Manager::applyCurrentMa(const RollerCommand& cmd) {
     endCurrentAuditPulse();
     // Capture one post-pulse speed sample only after the stop command has
     // already been applied. Failure is diagnostic-only and cannot fail stop.
-    readSpeedFresh(true);
+    if (readSpeedFresh(true) && telemetry_.pulse_end_wheel_speed_sample_time_us != 0) {
+      telemetry_.pulse_end_wheel_speed_capture_delay_us =
+          static_cast<uint32_t>(telemetry_.pulse_end_wheel_speed_sample_time_us - applied_us);
+    }
   }
   last_error_ = "";
   publishTelemetry();
@@ -398,7 +401,7 @@ bool Roller485Manager::readSpeedFresh(bool pulse_end_capture) {
     telemetry_.pulse_end_wheel_speed_rpm = telemetry_.wheel_speed_rpm;
     telemetry_.pulse_end_wheel_speed_sample_time_us = sample_time_us;
     telemetry_.pulse_end_wheel_speed_sequence = telemetry_.wheel_speed_sequence;
-    telemetry_.pulse_end_wheel_speed_capture_delay_us = 0;  // filled by caller after stop apply
+    telemetry_.pulse_end_wheel_speed_capture_delay_us = 0;
     telemetry_.pulse_end_wheel_speed_valid = true;
   }
   return true;

@@ -994,7 +994,11 @@ ENERGY_CONTROL_AUTONOMOUS_ZERO_CROSS_COLUMNS = [
     "g_side_base_deg_per_mA_s", "g_side_corrected_deg_per_mA_s", "correction_blend_lambda",
     "predicted_next_peak_amplitude_deg", "q_saturated_upper", "q_saturated_lower",
     "q_command_direction", "command_matches_zero_cross_motion", "vbat_mV",
-    "i0_estimated_mA", "solver_required_width_ms", "solver_selected_integer_width_ms",
+    "i0_estimated_mA", "pre_input_capture_time_us", "pre_input_measured_current_mA",
+    "pre_input_current_sample_time_us", "pre_input_current_age_us", "pre_input_current_valid",
+    "pre_input_wheel_speed_rpm", "pre_input_wheel_speed_sample_time_us",
+    "pre_input_wheel_speed_age_us", "pre_input_wheel_speed_valid",
+    "solver_required_width_ms", "solver_selected_integer_width_ms",
     "command_current_mA", "pulse_width_ms", "pulse_start_ms", "pulse_end_ms",
     "output_executed", "valid", "reason", "reason_code",
 ]

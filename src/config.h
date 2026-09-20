@@ -121,6 +121,8 @@ static constexpr uint32_t MADGWICK_SETTLING_MS = 5000UL;
 // operator; it is metadata, not a per-run angle-zero operation.
 static constexpr char PASSIVE_CAPTURE_FIRMWARE_REVISION[] = "energy_control_autonomous_v7_side_response_correction_20260904";
 static constexpr char ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920";
+// V46ak changes observation only. ATTITUDE_VALIDATION_REVISION intentionally remains V46aj.
+static constexpr char AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920";
 static constexpr float MEKF_GYRO_Y_SCALE = 0.908911f;
 static constexpr uint32_t PASSIVE_CAPTURE_DURATION_MS = 60000UL;
 static constexpr uint32_t PASSIVE_STATIC_WINDOW_MS = 3000UL;

@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+import math
 import struct
 import sys
 import zlib

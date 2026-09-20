@@ -37,7 +37,7 @@ MEKF、ピーク判定、角速度式の係数、Qゲイン、Ki、出力上限�
 
 ## 書き込み後の操作
 
-1. [書き込みページ](https://temesotejam.github.io/atoms3r-mekf-dynamic-validation/)でV46aj / 0.46.35を確認して書き込みます。
+1. [書き込みページ](https://temesotejam.github.io/atoms3r-amplitude-control-development/)でV46aj / 0.46.35を確認して書き込みます。
 2. 機体の操作画面を再読み込みし、「遅延補償：3 ms固定」を確認します。
 3. 比較測定は目標8°・30秒で行います。補償時間の設定操作は不要です。
 4. 各Run終了後、次の開始前にRWLOGと動画を保存します。

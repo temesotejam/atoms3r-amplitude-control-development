@@ -393,7 +393,7 @@ bool Roller485Manager::readSpeedFresh(bool pulse_end_capture) {
     return false;
   }
   const uint32_t sample_time_us = micros();
-  telemetry_.wheel_speed_rpm = speed_raw / 100;
+  telemetry_.wheel_speed_rpm = static_cast<float>(speed_raw) / 100.0f;
   telemetry_.wheel_speed_sample_time_us = sample_time_us;
   ++telemetry_.wheel_speed_sequence;
   telemetry_.wheel_speed_valid = true;

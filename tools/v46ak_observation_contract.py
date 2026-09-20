@@ -58,7 +58,7 @@ def normalize_roller_cpp(text: str) -> str:
     text = re.sub(
         r"\nbool Roller485Manager::readSpeedFresh\(\) \{.*?\n"
         r"void Roller485Manager::recordSpeedReadFailure\(\) \{.*?\n\}\n",
-        "\n",
+        "",
         text,
         flags=re.S,
     )

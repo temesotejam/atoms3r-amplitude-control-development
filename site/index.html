@@ -4,24 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>AtomS3R V46aj Fast Solver Motor Validation</title>
+  <title>AtomS3R Amplitude Control Development — V46aj baseline</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ATOMS3R / V46aj / MOTOR-DRIVEN VALIDATION</p>
-      <h1>MEKF Motor Validation<br><span>Web Flasher</span></h1>
-      <p class="lead">ピーク振幅と次のパルス計算をMEKFへ統一した測定版です。開始姿勢を0°とした角度を使い、ゼロクロスには3 msの遅延補償を適用します。</p>
+      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46aj BASELINE</p>
+      <h1>Amplitude Control Development<br><span>Baseline Web Flasher</span></h1>
+      <p class="lead">振幅制御開発の出発点として、検証済みのV46aj / 0.46.35をそのまま配布するベースラインです。開始姿勢を0°としたMEKF角度を使い、ゼロクロスには3 msの遅延補償を適用します。</p>
       <div class="badges"><span>ESP32-S3</span><span>BMI270 400/200 Hz</span><span>RWLOG v51</span><span>MEKF amplitude</span><span>3 ms compensation</span></div>
     </header>
     <section class="panel important">
-      <h2>V46aj / 0.46.35：遅延補償を3 msに固定</h2>
-      <p>遅延補償は3 ms固定です。補償時間を選ぶ操作はありません。次ピークの予測には、最初のZEROクロスから角速度式を使います。</p>
+      <h2>開発ベースライン：V46aj / 0.46.35</h2>
+      <p>このページが現在書き込むのは、元の姿勢推定検証リポジトリから未変更で移したV46ajです。遅延補償は3 ms固定で、次ピークの予測には最初のZEROクロスから角速度式を使います。</p>
       <p><strong>測定条件：遅延補償3 ms固定・目標8°・30秒。</strong>開始姿勢と撮影条件をそろえてください。補償時間の設定は不要です。各Run終了後、<strong>次の開始前にRWLOGと動画を保存</strong>してください。</p>
       <p>300 mA・最大100 ms、起動パルス、非常停止、IMU取得、LED同期は維持しています。目標8°への振幅が改善するかを実機で確認する試験版です。</p>
-      <p><a href="https://github.com/temesotejam/atoms3r-mekf-dynamic-validation/blob/main/docs/V46AJ_FIXED_3MS.md">3 ms固定化の変更内容・測定手順</a></p>
+      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AJ_FIXED_3MS.md">3 ms固定化の変更内容・測定手順</a></p>
       <p>公開ビルド：<code id="build-sha">取得中</code><br><a href="build-sha.txt">ビルドSHAを確認</a> / <a href="firmware/SHA256SUMS.txt">ファームウェアのSHA-256</a></p>
     </section>
 
@@ -81,7 +81,7 @@
       <p>Attitude revision: <code>v46aj_fixed_3ms_compensation_20260920</code></p>
     </section>
 
-    <footer>atoms3r-mekf-dynamic-validation / V46aj</footer>
+    <footer>atoms3r-amplitude-control-development / V46aj baseline</footer>
   </main>
   <script>
     fetch('build-sha.txt', {cache: 'no-store'})

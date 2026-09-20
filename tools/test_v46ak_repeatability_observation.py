@@ -33,7 +33,7 @@ speed_region = roller[roller.index('bool Roller485Manager::readSpeedFresh'):
                       roller.index('void Roller485Manager::recordFreshCurrent')]
 assert 'recordIo(' not in speed_region
 assert 'roller_ok' not in speed_region
-assert 'wheel_speed_rpm = speed_raw / 100' in speed_region
+assert 'wheel_speed_rpm = static_cast<float>(speed_raw) / 100.0f' in speed_region
 
 # No extra Roller snapshot/I2C read is introduced inside the accepted zero-cross decision.
 zero_region = runner[runner.index('void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross'):

@@ -50,16 +50,24 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
+## 現在の開発版: V46ak / 0.46.36
+
+V46ajの姿勢推定・3 ms補償・ピーク判定・rate-only予測・Q選択・出力上限を変更せず、
+**入力直前の実測電流とRoller485ホイール速度を観測ログへ追加**した版です。
+これらの観測値は制御には使用しません。
+
+- [V46akの変更内容](docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md)
+- [V46ajの確定済み角度推定](docs/ATTITUDE_ESTIMATION_V46AI_JA.md)
+
 ## 現在のWeb flasher
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現時点では、**未変更のV46aj / 0.46.35ベースライン**を書き込みます。
-今後ファームウェアを更新した場合は、バージョン・変更内容・実験条件をこのリポジトリ側で更新します。
+現在は **V46ak / 0.46.36** を書き込みます。
 
 ---
 
-## Current baseline firmware: V46aj / 0.46.35
+## Frozen control baseline: V46aj / 0.46.35
 
 Autonomousの遅延補償は **3 ms固定**です。0・6・9 msへの切り替え、選択画面、設定APIはありません。
 ZEROクロス判定には、MEKF角度をバイアス補正済み角速度で3 ms先へ進めた角度を使います。

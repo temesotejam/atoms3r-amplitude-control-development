@@ -58,6 +58,23 @@ assert 'pre_wheel_speed_age_us' in logger_h
 assert 'pre_current_age_us' in logger_h
 assert 'v46ak_repeatability_observation_policy' in logger
 
+zero_struct = logger_h.split(
+    'struct EnergyControlAutonomousZeroCrossEvent', 1
+)[1].split('};', 1)[0]
+for field in (
+    'pre_measured_current_mA',
+    'pre_current_sample_time_us',
+    'pre_current_age_us',
+    'pre_current_sequence',
+    'pre_current_valid',
+    'pre_wheel_speed_rpm',
+    'pre_wheel_speed_sample_time_us',
+    'pre_wheel_speed_age_us',
+    'pre_wheel_speed_sequence',
+    'pre_wheel_speed_valid',
+):
+    assert field in zero_struct, field
+
 # Converter must produce a one-row input -> next-peak joined table.
 spec = importlib.util.spec_from_file_location(
     "rwlog_converter", ROOT / "tools/convert_rwlog_to_csv.py"

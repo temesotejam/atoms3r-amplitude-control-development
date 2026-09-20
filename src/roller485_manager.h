@@ -34,6 +34,7 @@ struct RollerTelemetry {
   int32_t pulse_end_wheel_speed_rpm = 0;
   uint32_t pulse_end_wheel_speed_sample_time_us = 0;
   uint32_t pulse_end_wheel_speed_sequence = 0;
+  uint32_t pulse_end_wheel_speed_capture_delay_us = 0;
   bool pulse_end_wheel_speed_valid = false;
 
   // V46j task-split diagnostics. These are status-only and do not alter RWLOG v46.

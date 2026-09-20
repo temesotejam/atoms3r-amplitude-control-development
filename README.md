@@ -1,29 +1,70 @@
-# Frozen development snapshot — 2026-09-20
+# AtomS3R Amplitude Control Development
 
-**This repository is kept as the completed snapshot of the V46aj / 0.46.35 attitude-estimation and fixed-3-ms validation stage.**
-New control or prediction work will not be developed in this repository; the next stage will use a separate repository.
+AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を進めるための開発リポジトリです。
 
-- [最終スナップショット・確定事項・未確定事項（日本語）](docs/FINAL_SNAPSHOT_20260920_JA.md)
-- Firmware implementation checkpoint: `1e9fb1bfdd8261bedc6657158c27142921848939`
-- The measurement procedures below are retained for reproduction/history, not as a statement that further work will continue here.
+このリポジトリは、姿勢推定・計測系の検証を行った
+[`atoms3r-mekf-dynamic-validation`](https://github.com/temesotejam/atoms3r-mekf-dynamic-validation)
+の最終状態 **V46aj / 0.46.35** を、そのまま初期ベースラインとして引き継いで開始しました。
+
+## 開発の出発点
+
+- 初期ファームウェア: **V46aj / 0.46.35**
+- 姿勢推定: **6-state MEKF**
+- ZEROクロス遅延補償: **3 ms固定**
+- 次ピーク基準振幅: **ZEROクロス角速度と進行方向による rate-only model**
+- RWLOG: **v51**
+- 元リポジトリのV46aj実装コミット: `1e9fb1bfdd8261bedc6657158c27142921848939`
+- 元リポジトリの凍結時点: `1af3031d068a483361f0b519c35a826999040719`
+- インポートしたTree: `b90c4314bb296b66dc2f44cbf80228605f0ee6a9`
+
+初回インポート時点では、ソース、ドキュメント、テスト、GitHub Actions、Web flasherを含むTreeが元リポジトリと完全一致しています。
+
+## このリポジトリで進めること
+
+姿勢推定そのものを主題に戻すのではなく、現在のMEKF計測を土台として、主に次を検討します。
+
+- ZEROクロス状態からの**次ピーク振幅予測の改善**
+- 予測誤差と実測ピークを使った**入力Qの決定方法の改善**
+- 正負半周期の差や状態依存性の整理
+- 目標振幅へ収束させる**振幅制御則の改善**
+- 実機RWLOG・動画を用いたモデル／制御則の検証
+
+新しいモデルや制御則は、V46ajベースラインとの差が追える形で追加します。
+元の `atoms3r-mekf-dynamic-validation` は保存版として維持し、今後の開発変更はこのリポジトリ側で行います。
+
+## ベースラインで確認済みのこと
+
+2026-09-19のV46ai実機測定（目標8°、遅延補償3 ms、30秒）では、
+
+- 動画とファームウェアのピーク **69個がすべて一対一で対応**
+- 10〜30秒の46ピークで、MEKFと動画のピーク差 **RMSE 約0.103°**
+- 同区間の目標8°に対するMEKFピークのRMSE **約0.643°**
+
+でした。
+
+この結果から、**実際の揺れを捉える姿勢推定誤差と、目標振幅へ揃える制御誤差を分けて扱う**ことを、この開発の出発点とします。
+
+詳細:
+- [現在の角度推定](docs/ATTITUDE_ESTIMATION_V46AI_JA.md)
+- [V46aj: 3 ms固定化](docs/V46AJ_FIXED_3MS.md)
+- [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
+- [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
+
+## 現在のWeb flasher
+
+[AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
+
+現時点では、**未変更のV46aj / 0.46.35ベースライン**を書き込みます。
+今後ファームウェアを更新した場合は、バージョン・変更内容・実験条件をこのリポジトリ側で更新します。
 
 ---
 
-## Current firmware: V46aj / 0.46.35 — fixed 3 ms delay compensation
+## Current baseline firmware: V46aj / 0.46.35
 
-[Web flasher](https://temesotejam.github.io/atoms3r-mekf-dynamic-validation/) · [現在の角度推定の説明（日本語）](docs/ATTITUDE_ESTIMATION_V46AI_JA.md) · [今回の変更・測定手順](docs/V46AJ_FIXED_3MS.md) · [角速度による次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
-
-**Autonomousの遅延補償を3 ms固定にしました。** 0・6・9 msへの切り替え、選択画面、設定APIを削除しました。
-ZEROクロスの判定には、MEKF角度をバイアス補正済み角速度で3 ms先へ進めた角度を使います。
-次ピークの予測は、最初の通常判断から角速度式に統一しています。
-直前ピークは予測式の入力にしません。低速時に式が負となる場合は振幅を0°とします。
-MEKF、ピーク追跡、Qゲイン、Ki、300 mA・最大100 msは従来どおりです。
-
-**比較測定の条件：3 ms固定・8°・30秒。** 遅延補償の設定操作は不要です。
-各Run終了後、次の開始前にRWLOGと動画を保存してください。
-V46aiの初回実機測定3943では動画と69ピークが対応しました。推定方法、角度の基準、
-検証結果の意味は[現在の角度推定の説明](docs/ATTITUDE_ESTIMATION_V46AI_JA.md)を参照してください。
-RWLOG v51の配置を維持し、Autonomousのメタデータには固定値3000 µsを記録します。
+Autonomousの遅延補償は **3 ms固定**です。0・6・9 msへの切り替え、選択画面、設定APIはありません。
+ZEROクロス判定には、MEKF角度をバイアス補正済み角速度で3 ms先へ進めた角度を使います。
+次ピーク予測は最初の通常判断から角速度式を使用し、直前ピークは予測式の入力にしません。
+MEKF、ピーク追跡、Qゲイン、Ki、300 mA・最大100 msの出力上限はV46ajベースラインのままです。
 
 以下は過去の構成・検証の記録です。
 

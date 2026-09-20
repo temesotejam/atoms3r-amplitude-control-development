@@ -1,7 +1,9 @@
-# 最終スナップショット — 2026-09-20
+# 元リポジトリ最終スナップショット — 2026-09-20
 
-この文書は、`atoms3r-mekf-dynamic-validation` をここまでの到達点として保存するための最終整理です。
-このリポジトリでは、以後の新しい制御検討や機能追加を進めません。次段階の作業は別リポジトリで行います。
+> この文書は、元リポジトリ `atoms3r-mekf-dynamic-validation` を凍結した時点の記録です。  
+> 現在の `atoms3r-amplitude-control-development` は、この状態を初期ベースラインとして引き継ぎ、振幅制御の開発を継続します。
+
+元リポジトリでは、この時点以降の新しい制御検討や機能追加を行わず、次段階の作業を別リポジトリへ分離しました。
 
 ## 1. 保存する現在状態
 
@@ -9,7 +11,7 @@
 - 識別文字列: `v46aj_fixed_3ms_compensation_20260920`
 - RWLOG: **v51**
 - V46aj実装コミット: `1e9fb1bfdd8261bedc6657158c27142921848939`
-- Web書き込みページ: https://temesotejam.github.io/atoms3r-mekf-dynamic-validation/
+- 元リポジトリのWeb書き込みページ: https://temesotejam.github.io/atoms3r-mekf-dynamic-validation/
 
 V46ajではAutonomousの遅延補償を **3 ms固定**としています。
 0 / 6 / 9 msへの切り替え、選択画面、設定APIは削除済みです。
@@ -86,16 +88,16 @@ GitHub Actionsの以下のpush workflowは成功しています。
 
 Web flasherのmanifestもV46aj / 0.46.35を指しています。
 
-## 7. このリポジトリで今後行わないこと
+## 7. 元リポジトリで今後行わないこと
 
-このリポジトリは上記状態の記録・再現用として残します。
+元の `atoms3r-mekf-dynamic-validation` は上記状態の記録・再現用として残します。
 
 - 新しい制御モデルの追加
 - 新しい予測モデルの比較
 - 3 ms以外の遅延補償の再追加
 - 新しい実験系列に合わせた制御則の変更
 
-これらを含む次段階の作業は、履歴と目的を混ぜないため**別リポジトリ**で開始します。
+これらを含む次段階の作業は、履歴と目的を混ぜないため **`atoms3r-amplitude-control-development`** で開始します。
 
 ## 8. 主要文書
 

@@ -65,6 +65,6 @@ int main(){
 '''
 with tempfile.TemporaryDirectory() as d:
  p=Path(d);(p/'t.cpp').write_text(code);exe=p/'t'
- subprocess.run(['g++','-std=c++17','-O2','-Wall','-Wextra','-Werror','-I'+str(R/'src'),str(p/'t.cpp'),'-o',str(exe)],check=True)
+ subprocess.run(['g++','-std=c++17','-O2','-Wall','-Wextra','-Werror','-I'+str(R/'tools/host_v46o'),'-I'+str(R/'src'),str(p/'t.cpp'),'-o',str(exe)],check=True)
  subprocess.run([str(exe)],check=True)
 print('V46al previous-peak active control guards PASS')

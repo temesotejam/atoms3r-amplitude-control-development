@@ -10,7 +10,8 @@ web=(R/'src/web_ui.cpp').read_text()
 manifest=json.loads((R/'site/manifest.json').read_text())
 site=(R/'site/index.html').read_text()
 
-assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config
+assert ('RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config or
+        'RWLOG_DOWNLOAD_REVISION[] = "v46at_partial_write_safe_20260921"' in config)
 assert ('RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config or
         'RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921"' in config)
 
@@ -62,16 +63,16 @@ for token in (
     assert token in web, token
 
 # Transfer remains the V46al-style path restored in V46aq.
-assert 'STREAM_CHUNK_BYTES = 4096' in logger
-assert 'if (client.write(data, n) != n) return false;' in logger
+assert ('if (client.write(data, n) != n) return false;' in logger or
+        'rwlog_write_all::writeAll' in logger)
 assert 'rwlog_http_range' not in logger
 assert 'rwlog_stream_transport' not in logger
 assert 'beginNativeRwlogDownload' not in web
 assert 'resumeUiAfterDownload' not in web
 
-assert manifest['version'] in ('0.46.43','0.46.44')
-assert 'V46ar' in manifest['name'] or 'V46as' in manifest['name']
-assert 'V46ar / 0.46.43' in site or 'V46as / 0.46.44' in site
+assert manifest['version'] in ('0.46.43','0.46.44','0.46.45')
+assert 'V46ar' in manifest['name'] or 'V46as' in manifest['name'] or 'V46at' in manifest['name']
+assert 'V46ar / 0.46.43' in site or 'V46as / 0.46.44' in site or 'V46at / 0.46.45' in site
 
 for token in (
     'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"',

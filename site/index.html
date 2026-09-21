@@ -4,24 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>AtomS3R Amplitude Control Development — V46ak observation</title>
+  <title>AtomS3R Amplitude Control Development — V46al active control</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46ak OBSERVATION</p>
-      <h1>Amplitude Control Development<br><span>Pre-Input State Observation</span></h1>
-      <p class="lead">V46ajの姿勢推定・3 ms補償・制御則を変えず、入力直前の実電流とRoller485ホイール速度を観測ログへ追加したV46ak / 0.46.36です。</p>
+      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46al ACTIVE CONTROL</p>
+      <h1>Amplitude Control Development<br><span>Previous-Peak Active Control</span></h1>
+      <p class="lead">V46akの5 Runから得た直前ピーク補正を、V46ajの姿勢推定・3 ms補償・安全処理を維持したまま実際のQ決定へ適用するV46al / 0.46.37です。8°・10秒以降・学習済み直前ピーク範囲内だけで有効です。</p>
       <div class="badges"><span>ESP32-S3</span><span>BMI270 400/200 Hz</span><span>RWLOG v51</span><span>MEKF amplitude</span><span>3 ms compensation</span></div>
     </header>
     <section class="panel important">
-      <h2>観測強化版：V46ak / 0.46.36</h2>
-      <p>制御の中身はV46ajのままです。Roller485のSpeed Readbackと入力直前の実電流を、次ピーク再現性解析のためにログへ追加しています。これらの観測値は制御入力・パルス幅決定には使いません。</p>
+      <h2>実制御試験版：V46al / 0.46.37</h2>
+      <p>姿勢推定・ZEROクロス3 ms補償・ピーク検出・Qゲイン・Ki・電流モデル・fast solver・300 mA/最大100 ms・ESTOPは維持しています。変更点は、8°制御の10秒以降で、直前ピークが5 Runの測定範囲内にある場合だけ次ピーク予測へ最大±0.70°の補正を加えることです。</p>
       <p><strong>測定条件：遅延補償3 ms固定・目標8°・30秒。</strong>開始姿勢と撮影条件をそろえてください。補償時間の設定は不要です。各Run終了後、<strong>次の開始前にRWLOGと動画を保存</strong>してください。</p>
       <p>300 mA・最大100 ms、起動パルス、非常停止、IMU取得、LED同期は維持しています。目標8°への振幅が改善するかを実機で確認する試験版です。</p>
-      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md">V46akの観測追加内容</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AJ_FIXED_3MS.md">V46ajの3 ms固定化</a></p>
+      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md">V46alの実制御変更</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md">V46akの観測追加</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AJ_FIXED_3MS.md">V46ajの3 ms固定化</a></p>
       <p>公開ビルド：<code id="build-sha">取得中</code><br><a href="build-sha.txt">ビルドSHAを確認</a> / <a href="firmware/SHA256SUMS.txt">ファームウェアのSHA-256</a></p>
     </section>
 
@@ -29,7 +29,7 @@
       <h2>このページから直接書き込めます</h2>
       <p>AtomS3R を USB でPCへ接続し、Chrome または Edge のデスクトップ版で下のボタンを押してください。</p>
       <esp-web-install-button manifest="manifest.json">
-        <button slot="activate" class="primary">AtomS3RへV46akを書き込む</button>
+        <button slot="activate" class="primary">AtomS3RへV46alを書き込む</button>
         <span slot="unsupported" class="warning">このブラウザはWeb Serial / WebUSBに対応していません。PC版ChromeまたはEdgeを使用してください。</span>
       </esp-web-install-button>
       <details>
@@ -81,7 +81,7 @@
       <p>Attitude revision: <code>v46aj_fixed_3ms_compensation_20260920</code></p>
     </section>
 
-    <footer>atoms3r-amplitude-control-development / V46ak observation</footer>
+    <footer>atoms3r-amplitude-control-development / V46al active control</footer>
   </main>
   <script>
     fetch('build-sha.txt', {cache: 'no-store'})

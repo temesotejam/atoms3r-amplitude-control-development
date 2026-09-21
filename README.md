@@ -60,6 +60,8 @@ fast solver、300 mA・最大100 ms、ESTOPはV46aj/V46akから変更してい�
 補正量は最大 **±0.70°** です。条件外ではV46akのrate-only制御へ自動的に戻ります。
 
 - [V46alの実制御変更](docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md)
+- [V46anのnative download修正](docs/V46AN_NATIVE_RWLOG_DOWNLOAD.md)
+- [V46amのRWLOG送信修正](docs/V46AM_RWLOG_DOWNLOAD_STABILITY.md)
 - [V46akの観測追加](docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md)
 - [V46ajの確定済み角度推定](docs/ATTITUDE_ESTIMATION_V46AI_JA.md)
 

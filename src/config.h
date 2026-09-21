@@ -123,6 +123,26 @@ static constexpr char PASSIVE_CAPTURE_FIRMWARE_REVISION[] = "energy_control_auto
 static constexpr char ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920";
 // V46ak changes observation only. ATTITUDE_VALIDATION_REVISION intentionally remains V46aj.
 static constexpr char AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920";
+// V46al previous-peak active control begin
+static constexpr char AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921";
+static constexpr char ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION[] =
+    "V46AK_5RUN_8DEG_10TO30S_PREV_RESIDUAL_20260921";
+static constexpr bool ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_CONTROL_ENABLED = true;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_TARGET_DEG = 8.0f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_TARGET_TOLERANCE_DEG = 0.01f;
+static constexpr uint32_t ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_ENABLE_AFTER_MS = 10000UL;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MAX_ABS_CORRECTION_DEG = 0.70f;
+// Fit on five V46ak 8 deg runs, using only 10--30 s. Residual = actual - V46ak prediction.
+// The fit is side-specific and is applied only inside the measured previous-peak support.
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_C_AT_8_DEG = 0.591392151f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_K_PER_DEG = -0.442636343f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_SUPPORT_MIN_DEG = 7.19424f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_SUPPORT_MAX_DEG = 9.34474f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_C_AT_8_DEG = -0.157912422f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_K_PER_DEG = 0.585367534f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MIN_DEG = 6.95706f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MAX_DEG = 8.75588f;
+// V46al previous-peak active control end
 static constexpr float MEKF_GYRO_Y_SCALE = 0.908911f;
 static constexpr uint32_t PASSIVE_CAPTURE_DURATION_MS = 60000UL;
 static constexpr uint32_t PASSIVE_STATIC_WINDOW_MS = 3000UL;

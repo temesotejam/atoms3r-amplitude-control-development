@@ -34,7 +34,7 @@ assert metadata['rate_baseline_delta_cap_deg'] is None
 assert metadata['rate_baseline_p1_fallback_enabled'] is False
 assert metadata['rate_baseline_previous_peak_used'] is False
 assert metadata['rate_baseline_zero_floor_deg']==0
-assert 'RWLOG_FORMAT_VERSION = 51' in logger
+assert 'RWLOG_FORMAT_VERSION_LEGACY = 51' in logger
 with tempfile.TemporaryDirectory() as directory:
     p=Path(directory)
     event=dict(p1_free_peak_before_rate_deg=None,rate_baseline_correction_deg=None,

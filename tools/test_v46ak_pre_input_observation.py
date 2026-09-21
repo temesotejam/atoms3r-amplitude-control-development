@@ -18,8 +18,8 @@ assert "ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US = 3000UL" in config
 assert 'AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920"' in config
 
 # The V46ak observation layer must remain present in later flashable builds.
-assert manifest["version"] in ("0.46.36", "0.46.37", "0.46.38", "0.46.39", "0.46.40", "0.46.43")
-assert "V46ak / 0.46.36" in site or "V46al / 0.46.37" in site or "V46am / 0.46.38" in site or "V46an / 0.46.39" in site or "V46ao / 0.46.40" in site or "V46ar / 0.46.43" in site
+assert manifest["version"] in ("0.46.36", "0.46.37", "0.46.38", "0.46.39", "0.46.40", "0.46.44")
+assert "V46ak / 0.46.36" in site or "V46al / 0.46.37" in site or "V46am / 0.46.38" in site or "V46an / 0.46.39" in site or "V46ao / 0.46.40" in site or "V46as / 0.46.44" in site
 
 # Official Roller485 Speed Readback register and scale.
 assert "REG_SPEED_READBACK = 0x60" in roller_cpp
@@ -66,8 +66,8 @@ for token in (
 solver_region = runner[solver_pos:runner.index("logger_->addEnergyControlAutonomousZeroCrossEvent(event);", solver_pos)]
 assert "pre_input_" not in solver_region
 
-# Time-series binary layout stays frozen at RWLOG v51; additions are metadata-event only.
-assert "RWLOG_FORMAT_VERSION = 51" in logger_cpp
+# Legacy full-row layout remains v51; current Autonomous uses dedicated compact v52.
+assert "RWLOG_FORMAT_VERSION_LEGACY = 51" in logger_cpp
 assert "sizeof(LogSample) == 258" in (ROOT / "src/log_types.h").read_text(encoding="utf-8")
 assert "amplitude_control_observation_revision" in logger_cpp
 assert "observation_only_never_read_by_control" in logger_cpp

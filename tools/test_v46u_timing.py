@@ -9,9 +9,11 @@ from v46z_comparison_zero_contract import normalize_runner as normalize_v46z_run
 from check_v46u_deadlines import assess
 from v46ak_observation_contract import normalize_runner as normalize_v46ak_runner
 from v46al_control_contract import normalize_runner as normalize_v46al_runner
+from v46ap_compact_rwlog_contract import normalize_file as normalize_v46ap_file
 
 def main():
-    assert hashlib.sha256(normalize_v46z_runner(normalize_v46aa_runner(normalize_v46ab_runner(normalize_v46ac_runner(normalize_v46al_runner(normalize_v46ak_runner((ROOT/'src/experiment_runner.cpp').read_text())))))).encode()).hexdigest()=='2af5934f994c9c435ca53f4ef65ec98a5a95a4bd3355a740c0f1001e290f8c0e'
+    runner_text=normalize_v46ap_file('src/experiment_runner.cpp',(ROOT/'src/experiment_runner.cpp').read_text())
+    assert hashlib.sha256(normalize_v46z_runner(normalize_v46aa_runner(normalize_v46ab_runner(normalize_v46ac_runner(normalize_v46al_runner(normalize_v46ak_runner(runner_text)))))).encode()).hexdigest()=='2af5934f994c9c435ca53f4ef65ec98a5a95a4bd3355a740c0f1001e290f8c0e'
     baseline=json.loads((ROOT/'tools/v46s_audit_baseline.json').read_text())
     for p,h in baseline['protected'].items():
         assert hashlib.sha256(original_timing_file(p)).hexdigest()==h,p

@@ -35,6 +35,8 @@ SAMPLE_FORMAT_V49 = SAMPLE_FORMAT_V48
 SAMPLE_FORMAT_V50 = SAMPLE_FORMAT_V49
 # v51 changes Autonomous amplitude/rate semantics, not the binary sample layout.
 SAMPLE_FORMAT_V51 = SAMPLE_FORMAT_V50
+# v52 is the dedicated 40-byte Autonomous amplitude-control sample.
+SAMPLE_FORMAT_V52 = "<IIIhhhhhHHHHBBbBBBhh"
 PULSE_AUDIT_FORMAT_V46AP = "<IIhhiIIBB"
 PULSE_AUDIT_COLUMNS_V46AP = [
     "time_s", "pulse_id", "motor_cmd_mA", "actual_current_mA",
@@ -289,6 +291,15 @@ CSV_COLUMNS_V48 = CSV_COLUMNS_V47 + [
 CSV_COLUMNS_V49 = CSV_COLUMNS_V48
 CSV_COLUMNS_V50 = CSV_COLUMNS_V49
 CSV_COLUMNS_V51 = CSV_COLUMNS_V50
+CSV_COLUMNS_V52 = [
+    "time_s", "log_time_s", "t_test_ms", "pulse_id",
+    "pitch_mekf_measurement_relative_deg", "pitch_mekf_control_deg",
+    "gyro_pitch_rate_dps", "motor_cmd_mA", "roller_actual_current_mA",
+    "roller_battery_mV", "pulse_width_ms", "roller_current_age_us",
+    "imu_sample_age_us", "state_id", "pulse_active", "pulse_direction",
+    "sync_event_id", "roller_current_valid", "mekf_accel_used",
+    "mekf_accel_confidence", "mekf_accel_residual_deg",
+]
 CSV_COLUMNS_V33 = CSV_COLUMNS_COMMON_PREFIX + [
     "trial_predicted_beta_min", "beta_recovery_tau_s", "beta_model_vbat_mV", "predicted_i_goal_mA", "predicted_peak_current_mA", "beta_model_vbat_status",
     "beta_ceiling_fixed", "beta_ceiling_dynamic_hold073", "beta_ceiling_dynamic_hold120", "beta_ceiling_dynamic_hold170",
@@ -301,6 +312,8 @@ CSV_COLUMNS_V33 = CSV_COLUMNS_COMMON_PREFIX + [
     "beta_phase_state", "beta_phase_progress", "beta_phase_peak_angle_deg", "beta_phase_angle_deg", "beta_phase_ceiling",
 ]
 def csv_columns_for_version(format_version: int) -> list[str]:
+    if format_version >= 52:
+        return CSV_COLUMNS_V52
     if format_version >= 50:
         return CSV_COLUMNS_V50
     if format_version >= 49:
@@ -337,6 +350,8 @@ def csv_columns_for_version(format_version: int) -> list[str]:
 
 
 def sample_format_for_version(format_version: int) -> str:
+    if format_version >= 52:
+        return SAMPLE_FORMAT_V52
     if format_version >= 50:
         return SAMPLE_FORMAT_V50
     if format_version >= 49:
@@ -738,7 +753,46 @@ def convert_sample_v48(values):
     return row
 
 
+def convert_sample_v52(values):
+    (
+        time_us, t_test_ms, pulse_id,
+        pitch_mekf_measurement_relative_cdeg, pitch_mekf_control_cdeg,
+        gyro_pitch_rate_cdps, motor_cmd_mA, roller_actual_current_mA,
+        roller_battery_mV, pulse_width_ms, roller_current_age_us,
+        imu_sample_age_us, state_id, pulse_active, pulse_direction,
+        sync_event_id, roller_current_valid, mekf_accel_used,
+        mekf_accel_confidence_x10000, mekf_accel_residual_cdeg,
+    ) = values
+    def age(value):
+        return "" if value == 0xFFFF else value
+    return {
+        "time_s": f"{t_test_ms / 1000.0:.3f}",
+        "log_time_s": f"{time_us / 1000000.0:.6f}",
+        "t_test_ms": t_test_ms,
+        "pulse_id": pulse_id,
+        "pitch_mekf_measurement_relative_deg": f"{pitch_mekf_measurement_relative_cdeg / 100.0:.3f}",
+        "pitch_mekf_control_deg": f"{pitch_mekf_control_cdeg / 100.0:.3f}",
+        "gyro_pitch_rate_dps": f"{gyro_pitch_rate_cdps / 100.0:.3f}",
+        "motor_cmd_mA": motor_cmd_mA,
+        "roller_actual_current_mA": roller_actual_current_mA,
+        "roller_battery_mV": roller_battery_mV,
+        "pulse_width_ms": pulse_width_ms,
+        "roller_current_age_us": age(roller_current_age_us),
+        "imu_sample_age_us": age(imu_sample_age_us),
+        "state_id": state_id,
+        "pulse_active": pulse_active,
+        "pulse_direction": pulse_direction,
+        "sync_event_id": sync_event_id,
+        "roller_current_valid": roller_current_valid,
+        "mekf_accel_used": mekf_accel_used,
+        "mekf_accel_confidence": f"{mekf_accel_confidence_x10000 / 10000.0:.4f}",
+        "mekf_accel_residual_deg": f"{mekf_accel_residual_cdeg / 100.0:.3f}",
+    }
+
+
 def convert_sample(values, format_version: int):
+    if format_version >= 52:
+        return convert_sample_v52(values)
     if format_version >= 50:
         return convert_sample_v48(values)
     if format_version >= 49:
@@ -1073,8 +1127,8 @@ def write_pulse_audit_samples(data: bytes, header: dict, out_dir: Path) -> int:
 def convert(path: Path, out_dir: Path) -> None:
     data = path.read_bytes()
     header = parse_header(data)
-    if header["format_version"] not in (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51):
-        raise ValueError(f"this converter expects rwlog format v23-v27, v29-v51, got v{header['format_version']}")
+    if header["format_version"] not in (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52):
+        raise ValueError(f"this converter expects rwlog format v23-v27, v29-v52, got v{header['format_version']}")
     sample_format = sample_format_for_version(header["format_version"])
     if header["log_sample_size"] != struct.calcsize(sample_format):
         raise ValueError("unexpected sample size")
@@ -1129,7 +1183,7 @@ def convert(path: Path, out_dir: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Convert supported RWLOG v23-v50 files to CSV, including control and diagnostic metadata events.")
+    parser = argparse.ArgumentParser(description="Convert supported RWLOG v23-v52 files to CSV, including control and diagnostic metadata events.")
     parser.add_argument("rwlog", type=Path)
     parser.add_argument("--out", type=Path, default=Path("converted_dynamic_beta_hold73_tau73_compare"))
     args = parser.parse_args()

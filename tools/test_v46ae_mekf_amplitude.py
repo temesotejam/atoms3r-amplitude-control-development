@@ -39,7 +39,7 @@ assert 'ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US = 3000UL' in config
 assert 'ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_CORRECTION_ENABLED = false' in config
 assert 'energy_nonfinite_mekf_state' in methods
 for token in ['no_delay_projection;no_output_scaling', 'live_MEKF_bias',
-              'legacy_gyro_fit_disabled', 'RWLOG_FORMAT_VERSION = 51']:
+              'legacy_gyro_fit_disabled', 'RWLOG_FORMAT_VERSION_LEGACY = 51']:
     assert token in logger, token
 # Trace the tested peak amplitude through the real downstream feedforward path.
 zero = block(runner, 'void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross')

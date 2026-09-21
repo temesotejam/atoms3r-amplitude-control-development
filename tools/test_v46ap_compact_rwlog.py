@@ -12,7 +12,8 @@ converter = (R / "tools/convert_rwlog_to_csv.py").read_text(encoding="utf-8")
 manifest = json.loads((R / "site/manifest.json").read_text(encoding="utf-8"))
 site = (R / "site/index.html").read_text(encoding="utf-8")
 
-assert 'RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config
+assert ('RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config or
+        'RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921"' in config)
 assert "LOG_BUFFER_BYTES = 1UL * 1024UL * 1024UL" in config
 assert "PULSE_AUDIT_BUFFER_BYTES = 512UL * 1024UL" in config
 assert "LOG_PERIOD_MS = 20" in config
@@ -39,8 +40,8 @@ for token in (
     "header.summary_row_size = sizeof(PulseAuditSample)",
     "pulse_audit_count_ * sizeof(PulseAuditSample)",
     "reinterpret_cast<const uint8_t*>(pulse_audit_samples_)",
-    'metadata_profile\\":\\\"v46ap_compact',
-    "kCompactMetadataReserveBytes = 192U * 1024U",
+    ('metadata_profile\\":\\\"v46ap_compact' if 'metadata_profile\\":\\\"v46ap_compact' in logger else 'metadata_profile\\":\\\"v46as_autonomous_v52'),
+    ("kCompactMetadataReserveBytes = 192U * 1024U" if "kCompactMetadataReserveBytes = 192U * 1024U" in logger else "kCompactMetadataReserveBytes = 64U * 1024U"),
     'energy_control_autonomous_peak_events',
     'energy_control_autonomous_zero_cross_events',
 ):
@@ -55,9 +56,9 @@ pulse_capacity = (512 * 1024) // 26
 assert main_capacity * 0.020 > 30.0
 assert pulse_capacity * 0.002 > 30.0
 
-assert manifest["version"] in ("0.46.41","0.46.42","0.46.43")
-assert "V46ap" in manifest["name"] or "V46aq" in manifest["name"] or "V46ar" in manifest["name"]
-assert "V46ap / 0.46.41" in site or "V46aq / 0.46.42" in site or "V46ar / 0.46.43" in site
+assert manifest["version"] in ("0.46.41","0.46.42","0.46.43","0.46.44")
+assert "V46ap" in manifest["name"] or "V46aq" in manifest["name"] or "V46ar" in manifest["name"] or "V46as" in manifest["name"]
+assert "V46ap / 0.46.41" in site or "V46aq / 0.46.42" in site or "V46ar / 0.46.43" in site or "V46as / 0.46.44" in site
 
 # V46ap is logging/storage only. Physical output and timing limits remain frozen.
 for token in (

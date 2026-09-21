@@ -11,7 +11,8 @@ extern Roller485Manager roller;
 
 #include "config.h"
 
-static constexpr uint16_t RWLOG_FORMAT_VERSION = 51;
+static constexpr uint16_t RWLOG_FORMAT_VERSION_LEGACY = 51;
+static constexpr uint16_t RWLOG_FORMAT_VERSION_AUTONOMOUS_COMPACT = 52;
 static constexpr uint32_t RWLOG_FLAG_CRC32 = 1U << 0;
 static constexpr size_t STREAM_CHUNK_BYTES = 4096;
 
@@ -119,6 +120,14 @@ bool PsramLogger::begin() {
     return false;
   }
 
+  autonomous_sample_capacity_ = Config::AUTONOMOUS_LOG_BUFFER_BYTES / sizeof(AutonomousCompactSample);
+  autonomous_samples_ = static_cast<AutonomousCompactSample*>(
+      ps_malloc(autonomous_sample_capacity_ * sizeof(AutonomousCompactSample)));
+  if (!autonomous_samples_) {
+    last_error_ = "autonomous_log_psram_allocation_failed";
+    return false;
+  }
+
   pulse_audit_capacity_ = Config::PULSE_AUDIT_BUFFER_BYTES / sizeof(PulseAuditSample);
   pulse_audit_samples_ = static_cast<PulseAuditSample*>(
       ps_malloc(pulse_audit_capacity_ * sizeof(PulseAuditSample)));
@@ -143,6 +152,7 @@ bool PsramLogger::begin() {
 void PsramLogger::clear() {
   if (downloading_) return;
   sample_count_ = 0;
+  autonomous_sample_count_ = 0;
   pulse_audit_count_ = 0;
   current_run_id_ = 0;
   run_start_us_ = 0;
@@ -204,6 +214,7 @@ void PsramLogger::startRun(uint16_t run_id, uint64_t run_start_us, int16_t curre
                              bool energy_control_autonomous_mode) {
   if (downloading_) return;
   sample_count_ = 0;
+  autonomous_sample_count_ = 0;
   pulse_audit_count_ = 0;
   current_run_id_ = run_id;
   run_start_us_ = run_start_us;
@@ -390,7 +401,9 @@ bool PsramLogger::prepareRwLog() {
   prepare_crc_us_ = 0;
   prepare_total_us_ = 0;
 
-  if (!ready_ || run_start_us_ == 0 || sample_count_ == 0 || downloading_) {
+  const size_t active_sample_count =
+      energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_;
+  if (!ready_ || run_start_us_ == 0 || active_sample_count == 0 || downloading_) {
     rwlog_prepare_state_ = "not_ready";
     last_error_ = "rwlog_prepare_not_ready";
     return false;
@@ -426,7 +439,7 @@ bool PsramLogger::prepareRwLog() {
   last_error_ = "";
   Serial.printf("RWLOG prepared metadata=%u samples=%u pulse_audit=%u total=%u meta_us=%lu crc_us=%lu total_us=%lu free_psram=%u\n",
                 static_cast<unsigned>(prepared_metadata_.length()),
-                static_cast<unsigned>(sample_count_),
+                static_cast<unsigned>(energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_),
                 static_cast<unsigned>(pulse_audit_count_),
                 static_cast<unsigned>(prepared_total_size_),
                 static_cast<unsigned long>(prepare_metadata_us_),
@@ -442,6 +455,13 @@ bool PsramLogger::addSample(const LogSample& row) {
   return true;
 }
 
+bool PsramLogger::addAutonomousSample(const AutonomousCompactSample& row) {
+  if (!ready_ || downloading_ || !autonomous_samples_ ||
+      autonomous_sample_count_ >= autonomous_sample_capacity_) return false;
+  autonomous_samples_[autonomous_sample_count_++] = row;
+  return true;
+}
+
 bool PsramLogger::addPulseAuditSample(const PulseAuditSample& row) {
   if (!ready_ || downloading_ || !pulse_audit_samples_ ||
       pulse_audit_count_ >= pulse_audit_capacity_) return false;
@@ -450,8 +470,10 @@ bool PsramLogger::addPulseAuditSample(const PulseAuditSample& row) {
 }
 
 uint8_t PsramLogger::usagePercent() const {
-  if (sample_capacity_ == 0) return 0;
-  return static_cast<uint8_t>((sample_count_ * 100ULL) / sample_capacity_);
+  const size_t capacity = energy_control_autonomous_mode_ ? autonomous_sample_capacity_ : sample_capacity_;
+  const size_t count = energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_;
+  if (capacity == 0) return 0;
+  return static_cast<uint8_t>((count * 100ULL) / capacity);
 }
 
 bool PsramLogger::warningLevel() const {
@@ -459,7 +481,9 @@ bool PsramLogger::warningLevel() const {
 }
 
 bool PsramLogger::rwlogDownloadable() const {
-  return ready_ && run_start_us_ != 0 && sample_count_ > 0 && rwlog_prepared_;
+  return ready_ && run_start_us_ != 0 &&
+      (energy_control_autonomous_mode_ ? autonomous_sample_count_ > 0 : sample_count_ > 0) &&
+      rwlog_prepared_;
 }
 
 void PsramLogger::downloadFilename(char* out, size_t out_len) const {
@@ -485,7 +509,9 @@ String PsramLogger::buildMetadataJson() const {
   // calibration/shadow/solver experiment payloads remain available to their old
   // modes below, but are not rebuilt for the current amplitude-control run.
   if (energy_control_autonomous_mode_) {
-    static constexpr size_t kCompactMetadataReserveBytes = 192U * 1024U;
+    // V46as: current-control metadata only. Historical calibration/shadow/audit
+    // payloads are intentionally excluded from Autonomous runs.
+    static constexpr size_t kCompactMetadataReserveBytes = 64U * 1024U;
     String json;
     if (!json.reserve(kCompactMetadataReserveBytes)) {
       return String("{\"metadata_error\":\"compact_reserve_failed\"}");
@@ -499,9 +525,8 @@ String PsramLogger::buildMetadataJson() const {
     };
 
     json += "{";
-    json += "\"format\":\"rwlog_energy_control_autonomous_compact\",";
-    json += "\"metadata_profile\":\"v46ap_compact\",";
-    json += "\"firmware_revision\":\"" + String(Config::PASSIVE_CAPTURE_FIRMWARE_REVISION) + "\",";
+    json += "\"format\":\"rwlog_energy_control_autonomous_v52\",";
+    json += "\"metadata_profile\":\"v46as_autonomous_v52\",";
     json += "\"attitude_validation_revision\":\"" + String(Config::ATTITUDE_VALIDATION_REVISION) + "\",";
     json += "\"amplitude_control_observation_revision\":\"" + String(Config::AMPLITUDE_CONTROL_OBSERVATION_REVISION) + "\",";
     json += "\"amplitude_control_revision\":\"" + String(Config::AMPLITUDE_CONTROL_REVISION) + "\",";
@@ -509,21 +534,17 @@ String PsramLogger::buildMetadataJson() const {
     json += "\"rwlog_storage_revision\":\"" + String(Config::RWLOG_STORAGE_REVISION) + "\",";
     json += "\"previous_peak_control_model_revision\":\"" +
         String(Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION) + "\",";
-    json += "\"sample_size\":" + String(sizeof(LogSample)) + ",";
+    json += "\"sample_size\":" + String(sizeof(AutonomousCompactSample)) + ",";
+    json += "\"sample_count\":" + String(autonomous_sample_count_) + ",";
     json += "\"log_period_ms\":" + String(Config::LOG_PERIOD_MS) + ",";
     json += "\"pulse_audit_period_us\":" + String(Config::CURRENT_AUDIT_LOG_PERIOD_US) + ",";
     json += "\"pulse_audit_sample_size\":" + String(sizeof(PulseAuditSample)) + ",";
     json += "\"pulse_audit_count\":" + String(pulse_audit_count_) + ",";
-    json += "\"pulse_audit_capacity\":" + String(pulse_audit_capacity_) + ",";
-    json += "\"pulse_audit_summary_semantics\":\"summary_section;2ms_only_while_pulse_active;command_current_actual_current_wheel_speed_and_freshness\",";
     json += "\"autonomous_duration_ms\":" + String(Config::ENERGY_CONTROL_AUTONOMOUS_DURATION_MS) + ",";
     json += "\"autonomous_timing_compensation_us\":" + String(autonomous_timing_compensation_us_) + ",";
-    json += "\"energy_control_autonomous_target_peak_deg\":" + String(control_target_cdeg_ / 100.0f, 3) + ",";
+    json += "\"energy_control_autonomous_target_peak_deg\":" + String(control_target_cdeg_ / 100.0f, 2) + ",";
     json += "\"energy_control_autonomous_normal_current_mA\":" + String(Config::ENERGY_CONTROL_AUTONOMOUS_CURRENT_MA) + ",";
     json += "\"energy_control_autonomous_normal_width_max_ms\":" + String(Config::ENERGY_CONTROL_AUTONOMOUS_MAX_PULSE_MS) + ",";
-    json += "\"previous_peak_control_semantics\":\"8deg_only_after_10s_with_side_specific_support;bounded_plusminus_0p70deg;control_model_and_safety_unchanged\",";
-    json += "\"pre_input_observation_semantics\":\"current_and_wheel_speed_snapshot_before_solver_and_command;observation_only\",";
-    json += "\"metadata_json_reserve_bytes\":" + String(kCompactMetadataReserveBytes) + ",";
     json += "\"energy_control_autonomous_event_overflow\":" +
         String(energy_control_autonomous_event_overflow_ ? "true" : "false") + ",";
 
@@ -535,22 +556,17 @@ String PsramLogger::buildMetadataJson() const {
       json += ",\"peak_time_ms\":" + String(e.peak_time_ms);
       json += ",\"physical_peak_side\":" + String(e.physical_peak_side);
       json += ",";
-      appendNullable("peak_amplitude_deg", e.peak_amplitude_deg, 5);
+      appendNullable("peak_amplitude_deg", e.peak_amplitude_deg, 4);
       json += ",";
-      appendNullable("target_peak_deg", e.target_peak_deg, 5);
+      appendNullable("target_peak_deg", e.target_peak_deg, 3);
       json += ",";
-      appendNullable("peak_error_deg", e.peak_error_deg, 5);
-      json += ",\"phase\":" + String(e.phase);
+      appendNullable("peak_error_deg", e.peak_error_deg, 4);
       json += ",";
-      appendNullable("integral_plus_mA_s", e.integral_plus_mA_s, 6);
+      appendNullable("integral_plus_mA_s", e.integral_plus_mA_s, 5);
       json += ",";
-      appendNullable("integral_minus_mA_s", e.integral_minus_mA_s, 6);
-      json += ",\"first_peak\":" + String(e.first_peak ? "true" : "false");
-      json += ",\"pending_command_matched\":" + String(e.pending_command_matched ? "true" : "false");
+      appendNullable("integral_minus_mA_s", e.integral_minus_mA_s, 5);
       json += ",";
-      appendNullable("pending_q_command_mA_s", e.pending_q_command_mA_s, 6);
-      json += ",\"antiwindup_upper_hold\":" + String(e.antiwindup_upper_hold ? "true" : "false");
-      json += ",\"antiwindup_lower_hold\":" + String(e.antiwindup_lower_hold ? "true" : "false");
+      appendNullable("pending_q_command_mA_s", e.pending_q_command_mA_s, 5);
       json += "}";
     }
     json += "],";
@@ -560,79 +576,57 @@ String PsramLogger::buildMetadataJson() const {
       const EnergyControlAutonomousZeroCrossEvent& e = energy_control_autonomous_zero_cross_events_[i];
       if (i) json += ",";
       json += "{\"event_index\":" + String(e.event_index);
-      json += ",\"event_kind\":" + String(e.event_kind);
       json += ",\"zero_cross_time_ms\":" + String(e.zero_cross_time_ms);
       json += ",";
-      appendNullable("zero_cross_rate_dps", e.zero_cross_rate_dps, 6);
-      json += ",";
-      appendNullable("zero_cross_abs_rate_dps", e.zero_cross_abs_rate_dps, 6);
-      json += ",\"previous_peak_time_ms\":" + String(e.previous_peak_time_ms);
+      appendNullable("zero_cross_rate_dps", e.zero_cross_rate_dps, 5);
       json += ",\"previous_peak_side\":" + String(e.previous_peak_side);
       json += ",";
-      appendNullable("previous_peak_amplitude_deg", e.previous_peak_amplitude_deg, 5);
+      appendNullable("previous_peak_amplitude_deg", e.previous_peak_amplitude_deg, 4);
       json += ",\"physical_next_peak_side\":" + String(e.physical_next_peak_side);
-      json += ",\"phase\":" + String(e.phase);
       json += ",";
-      appendNullable("free_next_peak_amplitude_deg", e.free_next_peak_amplitude_deg, 6);
-      json += ",";
-      appendNullable("rate_baseline_peak_deg", e.rate_baseline_peak_deg, 6);
-      json += ",\"rate_baseline_reason\":" + String(e.rate_baseline_reason);
+      appendNullable("rate_baseline_peak_deg", e.rate_baseline_peak_deg, 5);
       json += ",";
       appendNullable("free_next_peak_before_previous_peak_correction_deg",
-                     e.free_next_peak_before_previous_peak_correction_deg, 6);
+                     e.free_next_peak_before_previous_peak_correction_deg, 5);
       json += ",";
       appendNullable("previous_peak_control_raw_correction_deg",
-                     e.previous_peak_control_raw_correction_deg, 6);
+                     e.previous_peak_control_raw_correction_deg, 5);
       json += ",";
       appendNullable("previous_peak_control_correction_deg",
-                     e.previous_peak_control_correction_deg, 6);
+                     e.previous_peak_control_correction_deg, 5);
       json += ",\"previous_peak_control_reason\":" + String(e.previous_peak_control_reason);
       json += ",\"previous_peak_control_applied\":" +
           String(e.previous_peak_control_applied ? "true" : "false");
       json += ",\"previous_peak_control_clamped\":" +
           String(e.previous_peak_control_clamped ? "true" : "false");
-      json += ",\"previous_peak_control_model_revision\":\"" +
-          String(Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION) + "\"";
       json += ",";
-      appendNullable("target_peak_deg", e.target_peak_deg, 5);
+      appendNullable("target_peak_deg", e.target_peak_deg, 3);
       json += ",";
-      appendNullable("q_ff_energy_mA_s", e.q_ff_energy_mA_s, 6);
+      appendNullable("q_ff_energy_mA_s", e.q_ff_energy_mA_s, 5);
       json += ",";
-      appendNullable("integral_side_mA_s", e.integral_side_mA_s, 6);
+      appendNullable("integral_side_mA_s", e.integral_side_mA_s, 5);
       json += ",";
-      appendNullable("q_unclamped_mA_s", e.q_unclamped_mA_s, 6);
+      appendNullable("q_unclamped_mA_s", e.q_unclamped_mA_s, 5);
       json += ",";
-      appendNullable("q_command_mA_s", e.q_command_mA_s, 6);
+      appendNullable("q_command_mA_s", e.q_command_mA_s, 5);
       json += ",";
-      appendNullable("q_effective_pred_mA_s", e.q_effective_pred_mA_s, 6);
+      appendNullable("q_effective_pred_mA_s", e.q_effective_pred_mA_s, 5);
       json += ",";
-      appendNullable("q_available_mA_s", e.q_available_mA_s, 6);
-      json += ",";
-      appendNullable("predicted_next_peak_amplitude_deg", e.predicted_next_peak_amplitude_deg, 6);
-      json += ",\"q_command_direction\":" + String(e.q_command_direction);
-      json += ",\"command_matches_zero_cross_motion\":" +
-          String(e.command_matches_zero_cross_motion ? "true" : "false");
+      appendNullable("predicted_next_peak_amplitude_deg", e.predicted_next_peak_amplitude_deg, 5);
       json += ",\"vbat_mV\":" + String(e.vbat_mV);
       json += ",";
-      appendNullable("i0_estimated_mA", e.i0_estimated_mA, 4);
-      json += ",\"pre_input_capture_time_us\":" + String(e.pre_input_capture_time_us);
-      json += ",";
-      appendNullable("pre_input_measured_current_mA", e.pre_input_measured_current_mA, 3);
-      json += ",\"pre_input_current_sample_time_us\":" + String(e.pre_input_current_sample_time_us);
+      appendNullable("pre_input_measured_current_mA", e.pre_input_measured_current_mA, 2);
       json += ",\"pre_input_current_age_us\":" + String(e.pre_input_current_age_us);
       json += ",\"pre_input_current_valid\":" + String(e.pre_input_current_valid ? "true" : "false");
       json += ",";
-      appendNullable("pre_input_wheel_speed_rpm", e.pre_input_wheel_speed_rpm, 3);
-      json += ",\"pre_input_wheel_speed_sample_time_us\":" + String(e.pre_input_wheel_speed_sample_time_us);
+      appendNullable("pre_input_wheel_speed_rpm", e.pre_input_wheel_speed_rpm, 2);
       json += ",\"pre_input_wheel_speed_age_us\":" + String(e.pre_input_wheel_speed_age_us);
       json += ",\"pre_input_wheel_speed_valid\":" + String(e.pre_input_wheel_speed_valid ? "true" : "false");
       json += ",";
-      appendNullable("solver_required_width_ms", e.solver_required_width_ms, 4);
+      appendNullable("solver_required_width_ms", e.solver_required_width_ms, 3);
       json += ",\"solver_selected_integer_width_ms\":" + String(e.solver_selected_integer_width_ms);
       json += ",\"command_current_mA\":" + String(e.command_current_mA);
       json += ",\"pulse_width_ms\":" + String(e.pulse_width_ms);
-      json += ",\"pulse_start_ms\":" + String(e.pulse_start_ms);
-      json += ",\"pulse_end_ms\":" + String(e.pulse_end_ms);
       json += ",\"output_executed\":" + String(e.output_executed ? "true" : "false");
       json += ",\"valid\":" + String(e.valid ? "true" : "false");
       json += ",\"reason_code\":" + String(e.reason);
@@ -841,7 +835,7 @@ String PsramLogger::buildMetadataJson() const {
   json += "\"roller_current_age_us_semantics\":\"time_since_last_successful_CURRENT_READBACK;4294967295_means_unknown\",";
   json += "\"roller_q_meas_observed_semantics\":\"absolute_current_trapezoid_over_adjacent_fresh_samples_inside_active_pulse_only;edge_intervals_are_not_estimated;diagnostic_not_total_physical_Q\",";
   json += "\"roller_q_meas_observed_valid_semantics\":\"at_least_two_fresh_active_pulse_samples_and_no_fast_current_read_failure_in_that_pulse;does_not_authorize_control\",";
-  json += "\"pulse_q_target_pred_semantics\":\"normal_V7_selected_q_command_and_q_effective_pred_only;START_KICK_is_null\",";  json += "\"format_version\":" + String(RWLOG_FORMAT_VERSION) + ",";
+  json += "\"pulse_q_target_pred_semantics\":\"normal_V7_selected_q_command_and_q_effective_pred_only;START_KICK_is_null\",";  json += "\"format_version\":" + String(RWLOG_FORMAT_VERSION_LEGACY) + ",";
   json += "\"calibration_algorithm_revision\":\"v61_state_feedback_rebuild_fixed_q_v51_video_hfree\",";
   json += "\"shadow_forward_model_version\":\"" + String(Config::ZERO_CROSS_V57_FORWARD_MODEL_VERSION) + "\",";
   json += "\"shadow_model_version\":\"" + String(Config::ZERO_CROSS_V57_INVERSE_SHADOW_VERSION) + "\",";
@@ -1925,15 +1919,17 @@ String PsramLogger::buildMetadataJson() const {
 RwLogFileHeader PsramLogger::buildHeader(uint32_t metadata_size) const {
   RwLogFileHeader header{};
   memcpy(header.magic, "RWLOG01", 8);
-  header.format_version = RWLOG_FORMAT_VERSION;
+  const bool compact_autonomous = energy_control_autonomous_mode_;
+  header.format_version = compact_autonomous
+      ? RWLOG_FORMAT_VERSION_AUTONOMOUS_COMPACT : RWLOG_FORMAT_VERSION_LEGACY;
   header.header_size = sizeof(RwLogFileHeader);
   header.run_id = current_run_id_;
   header.run_start_us = run_start_us_;
   header.metadata_json_size = metadata_size;
-  header.sample_count = sample_count_;
+  header.sample_count = compact_autonomous ? autonomous_sample_count_ : sample_count_;
   header.summary_count = pulse_audit_count_;
   header.event_count = 0;
-  header.log_sample_size = sizeof(LogSample);
+  header.log_sample_size = compact_autonomous ? sizeof(AutonomousCompactSample) : sizeof(LogSample);
   header.summary_row_size = sizeof(PulseAuditSample);
   header.event_row_size = 0;
   header.log_period_ms = Config::LOG_PERIOD_MS;
@@ -1948,7 +1944,10 @@ RwLogFileHeader PsramLogger::buildHeader(uint32_t metadata_size) const {
   header.preset_id = 32;
   header.flags = RWLOG_FLAG_CRC32;
   header.samples_offset = sizeof(RwLogFileHeader) + metadata_size;
-  header.summaries_offset = header.samples_offset + sample_count_ * sizeof(LogSample);
+  header.summaries_offset = header.samples_offset +
+      (compact_autonomous
+          ? autonomous_sample_count_ * sizeof(AutonomousCompactSample)
+          : sample_count_ * sizeof(LogSample));
   header.events_offset = header.summaries_offset + pulse_audit_count_ * sizeof(PulseAuditSample);
   header.crc_offset = header.events_offset;
   return header;
@@ -1969,7 +1968,13 @@ uint32_t PsramLogger::calculateCrc(const RwLogFileHeader& header, const String& 
   uint32_t crc = 0;
   crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(&header), sizeof(header));
   crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(metadata.c_str()), metadata.length());
-  crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(samples_), sample_count_ * sizeof(LogSample));
+  if (energy_control_autonomous_mode_) {
+    crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(autonomous_samples_),
+                      autonomous_sample_count_ * sizeof(AutonomousCompactSample));
+  } else {
+    crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(samples_),
+                      sample_count_ * sizeof(LogSample));
+  }
   crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
                     pulse_audit_count_ * sizeof(PulseAuditSample));
   return crc;
@@ -2007,7 +2012,13 @@ bool PsramLogger::streamRwLog(WebServer& server) {
   bool ok = true;
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&prepared_header_), sizeof(prepared_header_));
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(prepared_metadata_.c_str()), prepared_metadata_.length());
-  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(samples_), sample_count_ * sizeof(LogSample));
+  if (energy_control_autonomous_mode_) {
+    ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(autonomous_samples_),
+                          autonomous_sample_count_ * sizeof(AutonomousCompactSample));
+  } else {
+    ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(samples_),
+                          sample_count_ * sizeof(LogSample));
+  }
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
                         pulse_audit_count_ * sizeof(PulseAuditSample));
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&prepared_crc_), sizeof(prepared_crc_));

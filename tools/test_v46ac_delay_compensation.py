@@ -48,7 +48,7 @@ for token in (
 ):
     assert token in config, token
 
-assert "RWLOG_FORMAT_VERSION = 51" in logger
+assert "RWLOG_FORMAT_VERSION_LEGACY = 51" in logger
 assert "lightweight_scalar_delay_compensation" in logger
 assert "autonomous_timing_compensation_us" in logger
 print("V46ac lightweight delay compensation guards PASS")

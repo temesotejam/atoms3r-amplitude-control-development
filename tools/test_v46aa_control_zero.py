@@ -50,7 +50,7 @@ assert "raw_mekf_predicted_abs_deg_" not in motion
 assert "energy_control_autonomous_gyro_relative_deg_" not in motion
 assert "pitch_mekf_measurement_relative_deg" in motion
 
-assert "RWLOG_FORMAT_VERSION = 51" in logger
+assert "RWLOG_FORMAT_VERSION_LEGACY = 51" in logger
 assert "sizeof(LogSample) == 258" in log_types
 assert 'SAMPLE_FORMAT_V49 = SAMPLE_FORMAT_V48' in converter
 assert "autonomous_control_prediction_enabled" in logger

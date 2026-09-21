@@ -1,6 +1,6 @@
 {
-  "name": "AtomS3R V46ar Prepared RWLOG",
-  "version": "0.46.43",
+  "name": "AtomS3R V46as Autonomous Compact v52",
+  "version": "0.46.44",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

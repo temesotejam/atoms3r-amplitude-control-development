@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify V46ar prepared-RWLOG delta and retained control/safety envelope
+      - name: Verify V46as compact-v52 delta and retained control/safety envelope
         run: |
           set -euxo pipefail
           python tools/test_v46u_timing.py
@@ -41,6 +41,7 @@ jobs:
           python tools/test_v46ap_compact_rwlog.py
           python tools/test_v46aq_restored_download.py
           python tools/test_v46ar_prepared_rwlog.py
+          python tools/test_v46as_autonomous_compact_v52.py
       - name: Run retained native acquisition, startup, control and MEKF tests
         run: |
           set -euxo pipefail
@@ -55,7 +56,7 @@ jobs:
           python -m json.tool site/manifest.json >/dev/null
       - name: Install PlatformIO
         run: pip install platformio
-      - name: Build V46ar firmware with prepared RWLOG and V46al stream
+      - name: Build V46as firmware with 40-byte autonomous v52
         run: |
           set -euxo pipefail
           pio pkg install -e atoms3cam
@@ -71,12 +72,12 @@ jobs:
           cp bmi270-build-patch.json dist/
           python "$HOME/.platformio/packages/tool-esptoolpy/esptool.py" --chip esp32s3 merge_bin -o dist/merged-firmware.bin 0x0000 dist/bootloader.bin 0x8000 dist/partitions.bin 0xe000 dist/boot_app0.bin 0x10000 dist/firmware.bin
           printf '%s\n' "$GITHUB_SHA" > dist/build-sha.txt
-          printf '%s\n' 'V46ar 0.46.43; V46al previous-peak control retained unchanged; V46aj attitude and 3ms zero-cross timing retained; V46ap compact RWLOG and V46aq 4096-byte direct stream retained; metadata/header/CRC prepared before download; RWLOG main sample layout remains v51' > dist/FLASH_LAYOUT.txt
+          printf '%s\n' 'V46as 0.46.44; V46al previous-peak control retained unchanged; V46aj attitude and 3ms zero-cross timing retained; Autonomous primary timeseries is 40-byte RWLOG v52 at 50Hz; 26-byte 2ms Pulse Audit retained; metadata/header/CRC prepared before download; V46al 4096-byte direct stream retained' > dist/FLASH_LAYOUT.txt
           (cd dist && sha256sum *.bin > SHA256SUMS.txt)
           git diff --exit-code
       - uses: actions/upload-artifact@v4
         with:
-          name: atoms3r-v46ar-${{ github.sha }}
+          name: atoms3r-v46as-${{ github.sha }}
           path: dist/
           if-no-files-found: error
           retention-days: 30

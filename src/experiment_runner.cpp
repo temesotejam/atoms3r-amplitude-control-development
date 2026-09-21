@@ -5740,6 +5740,59 @@ void ExperimentRunner::logSampleNow() {
     requestEmergencyStop("log_buffer_full");
     return;
   }
+
+  if (energy_control_autonomous_mode_) {
+    auto ageToU16 = [](uint32_t age_us, bool valid) -> uint16_t {
+      if (!valid) return 0xFFFFU;
+      return age_us >= 0xFFFEU ? 0xFFFEU : static_cast<uint16_t>(age_us);
+    };
+    AutonomousCompactSample row{};
+    row.time_us = static_cast<uint32_t>(now_us - run_start_us_);
+    if (status_.sync_event_id == 2) {
+      row.time_us = 0;
+      row.t_test_ms = 0;
+    } else if (status_.state == ExperimentState::RUNNING_BATCH_SWEEP ||
+               status_.state == ExperimentState::TRIAL_REST) {
+      row.t_test_ms = millis() - run_start_ms_;
+    } else {
+      row.t_test_ms = status_.measure_elapsed_ms;
+    }
+    row.pulse_id = status_.pulse_id;
+    row.pitch_mekf_measurement_relative_cdeg =
+        centi(status_.pitch_mekf_measurement_relative_deg);
+    row.pitch_mekf_control_cdeg = centi(status_.pitch_mekf_deg);
+    row.gyro_pitch_rate_cdps = centi(status_.gyro_pitch_rate_dps);
+    row.motor_cmd_mA = status_.motor_cmd_mA;
+    row.roller_actual_current_mA = roller_telemetry.actual_current_mA;
+    row.roller_battery_mV = roller_telemetry.battery_mV;
+    row.pulse_width_ms = status_.pulse_width_ms_setting;
+    const uint32_t current_age_us = roller_telemetry.current_sample_time_us == 0
+        ? UINT32_MAX : static_cast<uint32_t>(now_us - roller_telemetry.current_sample_time_us);
+    const uint32_t imu_age_us = status_.imu_last_update_us == 0
+        ? UINT32_MAX : static_cast<uint32_t>(now_us - status_.imu_last_update_us);
+    row.roller_current_age_us = ageToU16(current_age_us, roller_telemetry.current_sample_time_us != 0);
+    row.imu_sample_age_us = ageToU16(imu_age_us, status_.imu_last_update_us != 0);
+    row.state_id = static_cast<uint8_t>(status_.state);
+    row.pulse_active = status_.pulse_active ? 1 : 0;
+    row.pulse_direction = status_.pulse_direction;
+    row.sync_event_id = status_.sync_event_id;
+    row.roller_current_valid = roller_telemetry.current_valid ? 1 : 0;
+    row.mekf_accel_used = status_.mekf_accel_used ? 1 : 0;
+    row.mekf_accel_confidence_x10000 = betaScaled(status_.mekf_accel_confidence);
+    row.mekf_accel_residual_cdeg = centi(status_.mekf_accel_residual_deg);
+    if (!logger_->addAutonomousSample(row)) {
+      requestEmergencyStop("autonomous_log_buffer_full");
+      return;
+    }
+    if (status_.sync_event_id == 2 || status_.sync_event_id == 3 ||
+        status_.sync_event_id == 6 || status_.sync_event_id == 7) {
+      status_.sync_event_id = 0;
+    }
+    if (last_log_us_ != 0) status_.log_dt_us = now_us - last_log_us_;
+    last_log_us_ = now_us;
+    return;
+  }
+
   LogSample row{};
   row.time_us = static_cast<uint32_t>(now_us - run_start_us_);
   if (status_.sync_event_id == 2) {

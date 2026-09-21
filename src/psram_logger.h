@@ -596,16 +596,23 @@ class PsramLogger {
   uint32_t prepareTotalUs() const { return prepare_total_us_; }
 
   bool addSample(const LogSample& row);
+  bool addAutonomousSample(const AutonomousCompactSample& row);
   bool addPulseAuditSample(const PulseAuditSample& row);
 
-  size_t sampleCount() const { return sample_count_; }
-  size_t sampleCapacity() const { return sample_capacity_; }
+  size_t sampleCount() const { return energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_; }
+  size_t sampleCapacity() const { return energy_control_autonomous_mode_ ? autonomous_sample_capacity_ : sample_capacity_; }
+  size_t autonomousSampleCount() const { return autonomous_sample_count_; }
+  size_t autonomousSampleCapacity() const { return autonomous_sample_capacity_; }
   size_t pulseAuditCount() const { return pulse_audit_count_; }
   size_t pulseAuditCapacity() const { return pulse_audit_capacity_; }
   bool pulseAuditFull() const { return pulse_audit_count_ >= pulse_audit_capacity_; }
   uint8_t usagePercent() const;
   bool warningLevel() const;
-  bool full() const { return sample_count_ >= sample_capacity_; }
+  bool full() const {
+    return energy_control_autonomous_mode_
+        ? autonomous_sample_count_ >= autonomous_sample_capacity_
+        : sample_count_ >= sample_capacity_;
+  }
   bool rwlogDownloadable() const;
   void downloadFilename(char* out, size_t out_len) const;
 
@@ -624,6 +631,9 @@ private:
   LogSample* samples_ = nullptr;
   size_t sample_capacity_ = 0;
   size_t sample_count_ = 0;
+  AutonomousCompactSample* autonomous_samples_ = nullptr;
+  size_t autonomous_sample_capacity_ = 0;
+  size_t autonomous_sample_count_ = 0;
   PulseAuditSample* pulse_audit_samples_ = nullptr;
   size_t pulse_audit_capacity_ = 0;
   size_t pulse_audit_count_ = 0;

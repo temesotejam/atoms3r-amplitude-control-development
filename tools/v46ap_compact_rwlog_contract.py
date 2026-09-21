@@ -27,6 +27,15 @@ OLD_LOG_SAMPLE_IF_DUE = """void ExperimentRunner::logSampleIfDue() {
 def normalize_file(path: str, text: str) -> str:
     if path == "src/experiment_runner.cpp":
         text = text.replace("  last_pulse_audit_us_ = 0;\n", "")
+        compact_start = text.find("  if (energy_control_autonomous_mode_) {\n    auto ageToU16")
+        compact_end = text.find("  LogSample row{};", compact_start)
+        if compact_start >= 0 and compact_end >= 0:
+            # The V46as block is separated from the frozen LogSample path by one
+            # extra blank line. Remove that separator as part of the inverse.
+            cut_start = compact_start
+            if compact_start >= 2 and text[compact_start - 2:compact_start] == "\n\n":
+                cut_start -= 1
+            text = text[:cut_start] + text[compact_end:]
         start = text.find("void ExperimentRunner::logSampleIfDue() {")
         end = text.find("void ExperimentRunner::logSampleNow() {", start)
         if start >= 0 and end >= 0 and "addPulseAuditSample" in text[start:end]:
@@ -34,6 +43,10 @@ def normalize_file(path: str, text: str) -> str:
     elif path == "src/experiment_runner.h":
         text = text.replace("  uint32_t last_pulse_audit_us_ = 0;\n", "")
     elif path == "src/config.h":
+        text = text.replace("static constexpr size_t AUTONOMOUS_LOG_BUFFER_BYTES = 128UL * 1024UL;\n", "")
+        text = text.replace(
+            'static constexpr char RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921";',
+            'static constexpr char RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921";')
         new = """// V46ap: the 258-byte full time-series row is now kept at the normal 50 Hz only.
 // 1 MiB holds >80 s at 50 Hz, comfortably above the fixed 30 s Autonomous run.
 // High-rate pulse current/wheel observations have their own compact PSRAM buffer.
@@ -45,6 +58,12 @@ static constexpr uint8_t BUFFER_WARNING_PERCENT = 90;"""
         text = text.replace(new, old)
         text = text.replace('static constexpr char RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921";\n', "")
     elif path == "src/log_types.h":
+        compact_marker = "\n// V46as: current Autonomous amplitude-control time series only."
+        pulse_marker = "\n// V46ap: compact 2 ms pulse-only observation record."
+        compact_pos = text.find(compact_marker)
+        pulse_pos = text.find(pulse_marker)
+        if compact_pos >= 0 and pulse_pos > compact_pos:
+            text = text[:compact_pos] + text[pulse_pos:]
         marker = "\n// V46ap: compact 2 ms pulse-only observation record."
         pos = text.find(marker)
         if pos >= 0:

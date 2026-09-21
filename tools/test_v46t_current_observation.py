@@ -21,7 +21,8 @@ assert body.count('telemetrySnapshot()')==1
 assert 'currentAgeUs(now_us)' not in body
 assert NEW_PREFIX in body and NEW_AGE in body
 prefix=NEW_PREFIX[:NEW_PREFIX.index('  if (logger_->full()) {')]
-assignment='  row.roller_current_age_us = '+body.split('  row.roller_current_age_us = ',1)[1].split(';',1)[0]+';'
+legacy_body=body[body.index('  LogSample row{};'):]
+assignment='  row.roller_current_age_us = '+legacy_body.split('  row.roller_current_age_us = ',1)[1].split(';',1)[0]+';'
 cpp=r'''#include <cstdint>
 #include <cassert>
 #include <iostream>

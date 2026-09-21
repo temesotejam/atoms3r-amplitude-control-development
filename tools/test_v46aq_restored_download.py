@@ -10,7 +10,8 @@ manifest=json.loads((R/'site/manifest.json').read_text())
 site=(R/'site/index.html').read_text()
 
 assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config
-assert 'RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config
+assert ('RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config or
+        'RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921"' in config)
 
 # Exact V46al-style server transport.
 assert 'STREAM_CHUNK_BYTES = 4096' in logger
@@ -34,7 +35,8 @@ for forbidden in (
 assert 'writeBytes(server, reinterpret_cast<const uint8_t*>(samples_)' in logger
 assert 'writeBytes(server, reinterpret_cast<const uint8_t*>(pulse_audit_samples_)' in logger
 assert 'pulse_audit_count_ * sizeof(PulseAuditSample)' in logger
-assert 'metadata_profile\\":\\\"v46ap_compact' in logger
+assert ('metadata_profile\\":\\\"v46ap_compact' in logger or
+        'metadata_profile\\":\\\"v46as_autonomous_v52' in logger)
 
 # Exact old-style browser behavior: plain anchor + short local hold.
 assert '<a id="rwlog" class="action" href="/download/rwlog" onclick="beginDownload()">Download RWLOG</a>' in web
@@ -47,9 +49,9 @@ assert 'collectHeaders' not in web
 assert '"Range"' not in web
 assert "fetch('/download/rwlog'" not in web
 
-assert manifest['version'] in ('0.46.42','0.46.43')
-assert 'V46aq' in manifest['name'] or 'V46ar' in manifest['name']
-assert 'V46aq / 0.46.42' in site or 'V46ar / 0.46.43' in site
+assert manifest['version'] in ('0.46.42','0.46.43','0.46.44')
+assert 'V46aq' in manifest['name'] or 'V46ar' in manifest['name'] or 'V46as' in manifest['name']
+assert 'V46aq / 0.46.42' in site or 'V46ar / 0.46.43' in site or 'V46as / 0.46.44' in site
 
 # Control/safety are not part of this rollback.
 for token in (

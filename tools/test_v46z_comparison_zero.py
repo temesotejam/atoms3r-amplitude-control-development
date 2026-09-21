@@ -80,7 +80,7 @@ assert "pitch_mekf_measurement_relative_deg" in control
 for token in ("pitch_mekf_start_sync_relative_deg", "pitch_mekf_trial_relative_deg"):
     assert token not in control, token
 
-assert "RWLOG_FORMAT_VERSION = 51" in logger
+assert "RWLOG_FORMAT_VERSION_LEGACY = 51" in logger
 assert "sizeof(LogSample) == 258" in log_types
 assert struct.calcsize(converter.SAMPLE_FORMAT_V47) == 250
 # The converter has derived/display CSV columns, so binary field count is not

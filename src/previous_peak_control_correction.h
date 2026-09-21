@@ -5,18 +5,18 @@
 
 namespace previous_peak_control {
 enum Reason : uint8_t {
-  APPLIED = 0,
-  DISABLED = 1,
-  BEFORE_ENABLE_TIME = 2,
-  TARGET_UNSUPPORTED = 3,
-  PREVIOUS_PEAK_OUTSIDE_SUPPORT = 4,
-  INVALID_INPUT = 5,
+  PREV_REASON_APPLIED = 0,
+  PREV_REASON_DISABLED = 1,
+  PREV_REASON_BEFORE_ENABLE_TIME = 2,
+  PREV_REASON_TARGET_UNSUPPORTED = 3,
+  PREV_REASON_OUTSIDE_SUPPORT = 4,
+  PREV_REASON_INVALID_INPUT = 5,
 };
 struct Result {
   float raw_correction_deg = NAN;
   float applied_correction_deg = 0.0f;
   float corrected_free_peak_deg = NAN;
-  Reason reason = INVALID_INPUT;
+  Reason reason = PREV_REASON_INVALID_INPUT;
   bool applied = false;
   bool clamped = false;
 };
@@ -25,19 +25,19 @@ inline Result evaluate(float base_free_peak_deg, float previous_peak_deg, int8_t
   Result r;
   r.corrected_free_peak_deg = base_free_peak_deg;
   if (!Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_CONTROL_ENABLED) {
-    r.reason = DISABLED; return r;
+    r.reason = PREV_REASON_DISABLED; return r;
   }
   if (!std::isfinite(base_free_peak_deg) || !std::isfinite(previous_peak_deg) ||
       !std::isfinite(target_peak_deg) || base_free_peak_deg < 0.0f ||
       previous_peak_deg < 0.0f || (next_side != 1 && next_side != -1)) {
-    r.corrected_free_peak_deg = NAN; r.reason = INVALID_INPUT; return r;
+    r.corrected_free_peak_deg = NAN; r.reason = PREV_REASON_INVALID_INPUT; return r;
   }
   if (t_test_ms < Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_ENABLE_AFTER_MS) {
-    r.reason = BEFORE_ENABLE_TIME; return r;
+    r.reason = PREV_REASON_BEFORE_ENABLE_TIME; return r;
   }
   if (std::fabs(target_peak_deg - Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_TARGET_DEG) >
       Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_TARGET_TOLERANCE_DEG) {
-    r.reason = TARGET_UNSUPPORTED; return r;
+    r.reason = PREV_REASON_TARGET_UNSUPPORTED; return r;
   }
   const float support_min = next_side > 0
       ? Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_SUPPORT_MIN_DEG
@@ -46,7 +46,7 @@ inline Result evaluate(float base_free_peak_deg, float previous_peak_deg, int8_t
       ? Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_SUPPORT_MAX_DEG
       : Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MAX_DEG;
   if (previous_peak_deg < support_min || previous_peak_deg > support_max) {
-    r.reason = PREVIOUS_PEAK_OUTSIDE_SUPPORT; return r;
+    r.reason = PREV_REASON_OUTSIDE_SUPPORT; return r;
   }
   const float c = next_side > 0
       ? Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_C_AT_8_DEG
@@ -59,7 +59,7 @@ inline Result evaluate(float base_free_peak_deg, float previous_peak_deg, int8_t
   r.applied_correction_deg = std::fmax(-limit, std::fmin(limit, r.raw_correction_deg));
   r.clamped = std::fabs(r.applied_correction_deg - r.raw_correction_deg) > 1.0e-6f;
   r.corrected_free_peak_deg = std::fmax(0.0f, base_free_peak_deg + r.applied_correction_deg);
-  r.reason = APPLIED; r.applied = true;
+  r.reason = PREV_REASON_APPLIED; r.applied = true;
   return r;
 }
 } // namespace previous_peak_control

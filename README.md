@@ -50,15 +50,16 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
-## 現在の開発版: V46aq / 0.46.42
+## 現在の開発版: V46ar / 0.46.43
 
-V46apの**compact RWLOG軽量化はそのまま維持**し、ダウンロード経路だけをV46am以降の方式から、
-実際に使用できていたV46al方式へ戻した版です。サーバは4096 byte単位で直接送信し、HTTP Range、
-partial-write再送、native-download hold、手動Resume UIは使いません。制御・姿勢推定・3 ms補償・安全上限は変更していません。
+V46apのcompact RWLOGとV46aqのV46al 4096 byte直接送信を維持し、**Download要求前にmetadataとCRCを事前計算**する版です。
+DownloadボタンはRWLOG準備が成功してから有効になります。WebUIには準備状態、metadata/総byte数、metadata生成時間、CRC時間を表示します。
+制御・姿勢推定・3 ms補償・安全上限は変更していません。
 
 補正は **target 8°・10秒以降・直前ピークが学習済み範囲内**のときだけ有効で、
 補正量は最大 **±0.70°** です。条件外ではV46akのrate-only制御へ自動的に戻ります。
 
+- [V46arの事前RWLOG準備](docs/V46AR_PREPARED_RWLOG.md)
 - [V46aqのV46alダウンロード復元](docs/V46AQ_V46AL_DOWNLOAD_RESTORE.md)
 - [V46apのRWLOG軽量化](docs/V46AP_COMPACT_RWLOG.md)
 - [V46alの実制御変更](docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md)
@@ -72,7 +73,7 @@ partial-write再送、native-download hold、手動Resume UIは使いません�
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現在は **V46aq / 0.46.42** を書き込みます。RWLOGの中身はV46apのcompact構成を維持し、転送方法だけV46alの4096 byte直接ダウンロードへ戻しています。
+現在は **V46ar / 0.46.43** を書き込みます。RWLOGは測定終了後にmetadataとCRCまで事前準備し、準備完了後はV46alの4096 byte直接送信でダウンロードします。
 
 ---
 

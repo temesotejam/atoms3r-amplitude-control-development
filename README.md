@@ -50,15 +50,17 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
-## 現在の開発版: V46ao / 0.46.40
+## 現在の開発版: V46ap / 0.46.41
 
-V46alの直前ピーク実制御、V46amの部分書き込み対応、V46anのnative downloadを維持し、**途中切断からHTTP Rangeで再開**できる版です。
-姿勢推定、3 ms補償、ZEROクロス判定、ピーク判定、Qゲイン、Ki、電流モデル、
-fast solver、300 mA・最大100 ms、ESTOPはV46aj/V46akから変更していません。
+V46alの直前ピーク実制御とV46aoまでのダウンロード経路を維持したまま、**RWLOG生成量を根本的に軽量化**した版です。
+通常の258 byte時系列は20 ms（50 Hz）固定に戻し、パルス中2 ms観測は26 byteの専用Pulse Auditとして分離しました。
+Autonomousのmetadataも現行の振幅制御解析に必要な項目へ限定します。姿勢推定、3 ms補償、ZEROクロス判定、
+ピーク判定、Qゲイン、Ki、電流モデル、fast solver、300 mA・最大100 ms、ESTOPは変更していません。
 
 補正は **target 8°・10秒以降・直前ピークが学習済み範囲内**のときだけ有効で、
 補正量は最大 **±0.70°** です。条件外ではV46akのrate-only制御へ自動的に戻ります。
 
+- [V46apのRWLOG軽量化](docs/V46AP_COMPACT_RWLOG.md)
 - [V46alの実制御変更](docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md)
 - [V46aoのHTTP Range再開](docs/V46AO_HTTP_RANGE_RESUME.md)
 - [V46anのnative download修正](docs/V46AN_NATIVE_RWLOG_DOWNLOAD.md)
@@ -70,7 +72,7 @@ fast solver、300 mA・最大100 ms、ESTOPはV46aj/V46akから変更してい�
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現在は **V46ao / 0.46.40** を書き込みます。V46alの制御内容はそのままで、RWLOGはnative download + HTTP Range resumeに対応します。
+現在は **V46ap / 0.46.41** を書き込みます。V46alの制御内容はそのままで、RWLOGは50 Hz通常ログ + 2 ms compact Pulse Audit + compact metadataです。native download + HTTP Range resumeも維持しています。
 
 ---
 

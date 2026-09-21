@@ -5,9 +5,11 @@ host test. These reviewed replacements preserve earlier frozen checksums.
 """
 import json
 from pathlib import Path
+from v46ap_compact_rwlog_contract import normalize_file as normalize_v46ap_file
 
 
 def normalize_v46aj(text: str, path: str) -> str:
+    text = normalize_v46ap_file(path, text)
     changes = json.loads(Path(__file__).with_name('v46aj_fixed_timing_delta.json').read_text())
     for delta in reversed(changes):
         if delta['path'] != path:

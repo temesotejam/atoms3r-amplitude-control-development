@@ -11,8 +11,8 @@ site=(R/'site/index.html').read_text()
 assert 'ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920"' in config
 assert 'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"' in config
 assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ao_http_range_resume_20260921"' in config
-assert manifest['version'] in ('0.46.39','0.46.40')
-assert 'V46an / 0.46.39' in site or 'V46ao / 0.46.40' in site
+assert manifest['version'] in ('0.46.39','0.46.40','0.46.41')
+assert 'V46an / 0.46.39' in site or 'V46ao / 0.46.40' in site or 'V46ap / 0.46.41' in site
 
 # Native browser download begins directly from the user's click.
 assert '<a id="rwlog" class="action" href="/download/rwlog" download onclick="return beginNativeRwlogDownload()">Download RWLOG</a>' in web

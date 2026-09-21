@@ -10,9 +10,9 @@ manifest=json.loads((R/'site/manifest.json').read_text())
 site=(R/'site/index.html').read_text()
 
 assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ao_http_range_resume_20260921"' in config
-assert manifest['version']=='0.46.40'
-assert 'V46ao' in manifest['name']
-assert 'V46ao / 0.46.40' in site
+assert manifest['version'] in ('0.46.40','0.46.41')
+assert 'V46ao' in manifest['name'] or 'V46ap' in manifest['name']
+assert 'V46ao / 0.46.40' in site or 'V46ap / 0.46.41' in site
 
 # WebServer must collect Range before begin and the RWLOG endpoint must advertise/resume bytes.
 assert 'const char* collected_headers[] = {"Range"};' in web
@@ -31,6 +31,7 @@ for token in (
 assert 'write_segment(reinterpret_cast<const uint8_t*>(&header)' in logger
 assert 'write_segment(reinterpret_cast<const uint8_t*>(metadata.c_str())' in logger
 assert 'write_segment(reinterpret_cast<const uint8_t*>(samples_)' in logger
+assert 'write_segment(reinterpret_cast<const uint8_t*>(pulse_audit_samples_)' in logger
 assert 'write_segment(reinterpret_cast<const uint8_t*>(&crc)' in logger
 assert 'RWLOG_FORMAT_VERSION = 51' in logger
 assert 'sizeof(LogSample) == 258' in (R/'src/log_types.h').read_text()

@@ -35,6 +35,12 @@ SAMPLE_FORMAT_V49 = SAMPLE_FORMAT_V48
 SAMPLE_FORMAT_V50 = SAMPLE_FORMAT_V49
 # v51 changes Autonomous amplitude/rate semantics, not the binary sample layout.
 SAMPLE_FORMAT_V51 = SAMPLE_FORMAT_V50
+PULSE_AUDIT_FORMAT_V46AP = "<IIhhiIIBB"
+PULSE_AUDIT_COLUMNS_V46AP = [
+    "time_s", "pulse_id", "motor_cmd_mA", "actual_current_mA",
+    "wheel_speed_rpm", "current_age_us", "wheel_speed_age_us",
+    "current_valid", "wheel_speed_valid",
+]
 HEADER_FIELDS = [
     "magic",
     "format_version",
@@ -1032,6 +1038,38 @@ def write_energy_control_autonomous_events(metadata: dict, out_dir: Path) -> tup
                     zero_count += 1
     return peak_count, zero_count
 
+def write_pulse_audit_samples(data: bytes, header: dict, out_dir: Path) -> int:
+    count = int(header.get("summary_count", 0))
+    if count <= 0:
+        return 0
+    expected = struct.calcsize(PULSE_AUDIT_FORMAT_V46AP)
+    if header.get("summary_row_size") != expected:
+        raise ValueError(f"unexpected pulse-audit summary row size {header.get('summary_row_size')} != {expected}")
+    start = int(header["summaries_offset"])
+    end = start + count * expected
+    if end > int(header["crc_offset"]) or end > len(data):
+        raise ValueError("pulse-audit summary section is truncated")
+    with (out_dir / "pulse_audit.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=PULSE_AUDIT_COLUMNS_V46AP)
+        writer.writeheader()
+        for i in range(count):
+            values = struct.unpack_from(PULSE_AUDIT_FORMAT_V46AP, data, start + i * expected)
+            (time_us, pulse_id, motor_cmd_mA, actual_current_mA, wheel_speed_x100_rpm,
+             current_age_us, wheel_speed_age_us, current_valid, wheel_speed_valid) = values
+            writer.writerow({
+                "time_s": f"{time_us / 1000000.0:.6f}",
+                "pulse_id": pulse_id,
+                "motor_cmd_mA": motor_cmd_mA,
+                "actual_current_mA": actual_current_mA,
+                "wheel_speed_rpm": "" if wheel_speed_x100_rpm == -2147483648 else f"{wheel_speed_x100_rpm / 100.0:.2f}",
+                "current_age_us": current_age_us,
+                "wheel_speed_age_us": wheel_speed_age_us,
+                "current_valid": current_valid,
+                "wheel_speed_valid": wheel_speed_valid,
+            })
+    return count
+
+
 def convert(path: Path, out_dir: Path) -> None:
     data = path.read_bytes()
     header = parse_header(data)
@@ -1068,8 +1106,12 @@ def convert(path: Path, out_dir: Path) -> None:
             values = struct.unpack_from(sample_format, data, offset)
             writer.writerow(convert_sample(values, header["format_version"]))
 
+    pulse_audit_count = write_pulse_audit_samples(data, header, out_dir)
+
     print(f"format_version={header['format_version']}")
     print(f"samples={header['sample_count']}")
+    if pulse_audit_count:
+        print(f"pulse_audit_samples={pulse_audit_count}")
     print(f"crc_ok={crc_ok}")
     if e2_shadow_peak_count:
         print(f"e2_shadow_peak_events={e2_shadow_peak_count}")

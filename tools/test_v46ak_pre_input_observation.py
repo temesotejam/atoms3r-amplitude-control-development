@@ -18,8 +18,8 @@ assert "ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US = 3000UL" in config
 assert 'AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920"' in config
 
 # The V46ak observation layer must remain present in later flashable builds.
-assert manifest["version"] in ("0.46.36", "0.46.37", "0.46.38", "0.46.39", "0.46.40")
-assert "V46ak / 0.46.36" in site or "V46al / 0.46.37" in site or "V46am / 0.46.38" in site or "V46an / 0.46.39" in site or "V46ao / 0.46.40" in site
+assert manifest["version"] in ("0.46.36", "0.46.37", "0.46.38", "0.46.39", "0.46.40", "0.46.41")
+assert "V46ak / 0.46.36" in site or "V46al / 0.46.37" in site or "V46am / 0.46.38" in site or "V46an / 0.46.39" in site or "V46ao / 0.46.40" in site or "V46ap / 0.46.41" in site
 
 # Official Roller485 Speed Readback register and scale.
 assert "REG_SPEED_READBACK = 0x60" in roller_cpp

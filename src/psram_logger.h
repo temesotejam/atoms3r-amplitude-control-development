@@ -587,9 +587,13 @@ class PsramLogger {
   bool downloading() const { return downloading_; }
 
   bool addSample(const LogSample& row);
+  bool addPulseAuditSample(const PulseAuditSample& row);
 
   size_t sampleCount() const { return sample_count_; }
   size_t sampleCapacity() const { return sample_capacity_; }
+  size_t pulseAuditCount() const { return pulse_audit_count_; }
+  size_t pulseAuditCapacity() const { return pulse_audit_capacity_; }
+  bool pulseAuditFull() const { return pulse_audit_count_ >= pulse_audit_capacity_; }
   uint8_t usagePercent() const;
   bool warningLevel() const;
   bool full() const { return sample_count_ >= sample_capacity_; }
@@ -611,6 +615,9 @@ private:
   LogSample* samples_ = nullptr;
   size_t sample_capacity_ = 0;
   size_t sample_count_ = 0;
+  PulseAuditSample* pulse_audit_samples_ = nullptr;
+  size_t pulse_audit_capacity_ = 0;
+  size_t pulse_audit_count_ = 0;
   uint16_t current_run_id_ = 0;
   uint64_t run_start_us_ = 0;
   int16_t run_current_mA_ = 0;

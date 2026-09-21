@@ -441,6 +441,7 @@ private:
   uint32_t last_imu_update_us_ = 0;  // V46g: last consumed gyro sequence
   uint32_t last_mekf_accel_sequence_ = 0;
   uint32_t last_log_us_ = 0;
+  uint32_t last_pulse_audit_us_ = 0;
   uint32_t static_rate_since_ms_ = 0;
   float display_zero_offset_deg_ = 0.0f;
   float target_roll_deg_ = 0.0f;

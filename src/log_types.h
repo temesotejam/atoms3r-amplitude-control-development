@@ -163,5 +163,23 @@ struct LogSample {
 };
 #pragma pack(pop)
 
+// V46ap: compact 2 ms pulse-only observation record. These rows are written to
+// the RWLOG header's summary section; the existing 258-byte LogSample stays
+// byte-for-byte compatible and returns to its normal 20 ms cadence.
+#pragma pack(push, 1)
+struct PulseAuditSample {
+  uint32_t time_us;
+  uint32_t pulse_id;
+  int16_t motor_cmd_mA;
+  int16_t actual_current_mA;
+  int32_t wheel_speed_x100_rpm;
+  uint32_t current_age_us;
+  uint32_t wheel_speed_age_us;
+  uint8_t current_valid;
+  uint8_t wheel_speed_valid;
+};
+#pragma pack(pop)
+
 static_assert(sizeof(RwLogFileHeader) == 110, "RwLogFileHeader binary size changed");
 static_assert(sizeof(LogSample) == 258, "LogSample binary size changed");
+static_assert(sizeof(PulseAuditSample) == 26, "PulseAuditSample binary size changed");

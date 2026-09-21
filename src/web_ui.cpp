@@ -47,7 +47,7 @@ footer{text-align:center;color:#87919c;font-size:.76rem;padding:4px 0 14px}
 <body>
 <header>
   <h1>AtomS3R Amplitude Control</h1>
-  <p>V46al-R1 / 0.46.41 — A_prev active control</p>
+  <p>V46al-R2 / 0.46.42 — A_prev active control</p>
 </header>
 <main>
   <div class="card">
@@ -87,7 +87,7 @@ footer{text-align:center;color:#87919c;font-size:.76rem;padding:4px 0 14px}
     <button id="clear" class="secondary" disabled onclick="postClear()">測定データを消去</button>
   </div>
 </main>
-<footer>V46al-R1: A_prev prediction layer active / MEKF・3 ms・RWLOG download frozen</footer>
+<footer>V46al-R2: A_prev control active / logger・RWLOG download = stable</footer>
 <script>
 let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0;
 const energy=document.getElementById('energy');

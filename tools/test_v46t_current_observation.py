@@ -7,7 +7,8 @@ from v46ac_delay_comp_contract import normalize_runner as normalize_v46ac_runner
 from v46ab_no_prediction_contract import normalize_runner as normalize_v46ab_runner
 from v46aa_control_zero_contract import normalize_runner as normalize_v46aa_runner
 from v46z_comparison_zero_contract import normalize_runner as normalize_v46z_runner
-from v46ak_observation_contract import normalize_runner as normalize_v46ak_runner\nfrom v46al_control_contract import normalize_runner as normalize_v46al_runner
+from v46ak_observation_contract import normalize_runner as normalize_v46ak_runner
+from v46al_control_contract import normalize_runner as normalize_v46al_runner
 R=Path(__file__).resolve().parents[1]
 s=(R/'src/experiment_runner.cpp').read_text()
 base='abed74514dd0c29d494c3172b60efa466553b8015c649e4f5306b472a289d893'

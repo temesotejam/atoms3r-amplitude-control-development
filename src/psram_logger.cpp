@@ -1,4 +1,5 @@
 #include "psram_logger.h"
+#include "rwlog_stream_transport.h"
 #include "imu_manager.h"
 extern ImuManager imu;
 #include "run_control_worker.h"
@@ -13,7 +14,6 @@ extern Roller485Manager roller;
 
 static constexpr uint16_t RWLOG_FORMAT_VERSION = 51;
 static constexpr uint32_t RWLOG_FLAG_CRC32 = 1U << 0;
-static constexpr size_t STREAM_CHUNK_BYTES = 4096;
 
 namespace {
 String jsonFloatOrNull(float value, unsigned int decimals) {
@@ -414,6 +414,7 @@ String PsramLogger::buildMetadataJson() const {
   json += "\"attitude_validation_revision\":\"" + String(Config::ATTITUDE_VALIDATION_REVISION) + "\",";
   json += "\"amplitude_control_observation_revision\":\"" + String(Config::AMPLITUDE_CONTROL_OBSERVATION_REVISION) + "\",";
   json += "\"amplitude_control_revision\":\"" + String(Config::AMPLITUDE_CONTROL_REVISION) + "\",";
+  json += "\"rwlog_download_revision\":\"" + String(Config::RWLOG_DOWNLOAD_REVISION) + "\",";
   json += "\"previous_peak_control_model_revision\":\"" + String(Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION) + "\",";
   json += "\"previous_peak_control_semantics\":\"8deg_only_after_10s_and_within_side_specific_previous_peak_support;affine_residual_correction_c_plus_k_times_prev_minus_8;bounded_to_plusminus_0p70deg;changes_free_peak_before_existing_energy_solver;q_gain_Ki_current_model_and_safety_unchanged\",";
   json += "\"v46ak_pre_input_observation_semantics\":\"latest_independent_coast_current_and_speed_snapshots_captured_before_solver_and_command;speed_readback_register_0x60_x100_rpm;observation_only_never_read_by_control\",";
@@ -1720,14 +1721,10 @@ uint32_t PsramLogger::calculateCrc(const RwLogFileHeader& header, const String& 
 
 bool PsramLogger::writeBytes(WebServer& server, const uint8_t* data, size_t len) {
   WiFiClient client = server.client();
-  while (len > 0) {
-    const size_t n = len > STREAM_CHUNK_BYTES ? STREAM_CHUNK_BYTES : len;
-    if (client.write(data, n) != n) return false;
-    data += n;
-    len -= n;
-    delay(0);
-  }
-  return true;
+  return rwlog_stream_transport::writeAll(
+      client, data, len,
+      []() -> uint32_t { return millis(); },
+      [](uint32_t ms) { delay(ms); });
 }
 
 bool PsramLogger::streamRwLog(WebServer& server) {
@@ -1746,6 +1743,8 @@ bool PsramLogger::streamRwLog(WebServer& server) {
 
   server.sendHeader("Content-Disposition", String("attachment; filename=\"") + filename + "\"");
   server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  server.sendHeader("Connection", "close");
+  server.sendHeader("X-RWLOG-Transport", "v46am-partial-write-safe");
   server.setContentLength(header.crc_offset + sizeof(crc));
   server.send(200, "application/octet-stream", "");
 

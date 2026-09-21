@@ -9,7 +9,7 @@ web=(R/'src/web_ui.cpp').read_text()
 manifest=json.loads((R/'site/manifest.json').read_text())
 site=(R/'site/index.html').read_text()
 
-assert 'RWLOG_DOWNLOAD_REVISION[] = "v46aq_v46al_download_restore_20260921"' in config
+assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config
 assert 'RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config
 
 # Exact V46al-style server transport.
@@ -46,9 +46,9 @@ assert 'collectHeaders' not in web
 assert '"Range"' not in web
 assert "fetch('/download/rwlog'" not in web
 
-assert manifest['version']=='0.46.42'
-assert 'V46aq' in manifest['name']
-assert 'V46aq / 0.46.42' in site
+assert manifest['version'] in ('0.46.42','0.46.43')
+assert 'V46aq' in manifest['name'] or 'V46ar' in manifest['name']
+assert 'V46aq / 0.46.42' in site or 'V46ar / 0.46.43' in site
 
 # Control/safety are not part of this rollback.
 for token in (

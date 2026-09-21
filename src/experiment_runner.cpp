@@ -5697,7 +5697,7 @@ void ExperimentRunner::logSampleIfDue() {
     const bool probe_log = timing_probe_pending_ && !timing_probe_log_captured_ &&
         status_.pulse_id == timing_probe_event_.pulse_id;
     const uint32_t audit_start_us = probe_log ? micros() : 0;
-    const RollerTelemetry roller_telemetry = roller_ ? roller_->telemetrySnapshot() : RollerTelemetry{};
+    const RollerTelemetry roller_telemetry = roller_->telemetrySnapshot();
     PulseAuditSample audit{};
     audit.time_us = static_cast<uint32_t>(now_us - run_start_us_);
     audit.pulse_id = status_.pulse_id;

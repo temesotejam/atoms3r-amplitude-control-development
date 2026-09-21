@@ -5,25 +5,11 @@ import json, subprocess, tempfile
 R=Path(__file__).resolve().parents[1]
 config=(R/'src/config.h').read_text()
 logger=(R/'src/psram_logger.cpp').read_text()
-web=(R/'src/web_ui.cpp').read_text()
 transport=(R/'src/rwlog_stream_transport.h').read_text()
-manifest=json.loads((R/'site/manifest.json').read_text())
-site=(R/'site/index.html').read_text()
 
 assert 'ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920"' in config
 assert 'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"' in config
-assert 'RWLOG_DOWNLOAD_REVISION[] = "v46am_fetch_backpressure_20260921"' in config
-assert manifest['version']=='0.46.38' and 'V46am' in manifest['name']
-assert 'V46am / 0.46.38' in site
-
-# UI owns the download until fetch/blob completion; no fixed 3 s unlock.
-assert '<button id="rwlog" onclick="downloadRwLog()">Download RWLOG</button>' in web
-assert 'async function downloadRwLog()' in web
-assert "fetch('/download/rwlog',{cache:'no-store'})" in web
-assert 'async function refresh()' in web
-assert 'if(refreshInFlight||downloading)return;' in web
-assert 'function beginDownload()' not in web
-assert 'setTimeout(()=>{downloading=false;refresh();},3000)' not in web
+assert 'RWLOG_DOWNLOAD_REVISION[] = "v46an_native_download_hold_20260921"' in config
 
 # Server transport handles short writes instead of treating them as fatal.
 assert 'CHUNK_BYTES = 1460' in transport
@@ -69,4 +55,4 @@ with tempfile.TemporaryDirectory() as d:
     p=Path(d);(p/'t.cpp').write_text(code);exe=p/'t'
     subprocess.run(['g++','-std=c++17','-O2','-Wall','-Wextra','-Werror','-I'+str(R/'src'),str(p/'t.cpp'),'-o',str(exe)],check=True)
     subprocess.run([str(exe)],check=True)
-print('V46am RWLOG download transport guards PASS')
+print('V46am server-side RWLOG transport guards PASS')

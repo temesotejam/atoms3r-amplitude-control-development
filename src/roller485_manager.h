@@ -11,13 +11,6 @@ struct RollerTelemetry {
   bool roller_ok = false;
   int16_t actual_current_mA = 0;
   uint16_t battery_mV = 0;
-
-  // V46ak observation-only wheel-state telemetry. Never read by control logic.
-  float speed_rpm = NAN;
-  uint32_t speed_sample_time_us = 0;
-  uint32_t speed_sequence = 0;
-  uint32_t speed_read_failure_count = 0;
-  bool speed_valid = false;
   uint32_t i2c_error_count = 0;
   uint8_t consecutive_errors = 0;
   uint8_t mode_raw = 0;
@@ -84,10 +77,8 @@ private:
   bool readI32(uint8_t reg, int32_t& value);
   bool readU8(uint8_t reg, uint8_t& value);
   bool readCurrentFresh(bool audit_sample);
-  bool readSpeedFresh();
   void recordFreshCurrent(int32_t current_raw, uint32_t sample_time_us, bool audit_sample);
   void recordCurrentReadFailure(bool audit_sample);
-  void recordSpeedReadFailure();
   void beginCurrentAuditPulse();
   void endCurrentAuditPulse();
   void recordIo(bool ok);

@@ -16,7 +16,7 @@ for token in (
     assert token in config, token
 assert (
     "v46l_fast_solver_shadow_20260914" in config or
-    "v46aj_fixed_3ms_compensation_20260920" in config
+    "v46ad_delay_compensation_sweep_20260919" in config
 ), "supported V46l/V46s controller identity"
 for token in ("M5.Imu.getType() != m5::imu_bmi270", "getImuInstancePtr(0)", "sensor_mask_accel",
               "sensor_mask_gyro", "accel_sequence", "gyro_sequence"):
@@ -32,7 +32,7 @@ assert "r.accel_sequence != g_v46_mekf_run_reinit.last_accel_sequence" in runner
 print("V46l/V46s high-rate / forward-prediction source guards passed")
 
 web = Path("src/web_ui.cpp").read_text(encoding="utf-8")
-assert "if(refreshInFlight||downloading)return;" in web
+assert "if(refreshInFlight)return;" in web
 # V46o+: a bounded, fixed-size heartbeat replaces the 41-second blind pause.
 assert "setInterval(refresh,1000)" in web
 status_region = web[web.index("void WebUi::handleStatus()"):web.index("void WebUi::handleStartPassive()")]

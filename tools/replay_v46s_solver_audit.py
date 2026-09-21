@@ -17,18 +17,12 @@ from v46ac_delay_comp_contract import normalize_runner as normalize_v46ac_runner
 from v46ab_no_prediction_contract import normalize_runner as normalize_v46ab_runner
 from v46aa_control_zero_contract import normalize_runner as normalize_v46aa_runner
 from v46z_comparison_zero_contract import normalize_runner as normalize_v46z_runner
-from v46ak_observation_contract import normalize_runner as normalize_v46ak_runner
-from v46al_control_contract import normalize_runner as normalize_v46al_runner
-from v46ap_compact_rwlog_contract import normalize_file as normalize_v46ap_file
 
 ROOT = Path(__file__).resolve().parents[1]
 FLOAT_FIELDS = 'i0_mA free_peak_deg target_peak_deg target_energy_j passive_energy_j q_available_mA_s integral_mA_s signed_target_current_mA tau_s base_gain correction_c correction_gain correction_limit ff_q_mA_s selected_q_mA_s corrected_target_energy_j'.split()
 
 def original_runner():
-    text = normalize_v46ap_file('src/experiment_runner.cpp', (ROOT / 'src/experiment_runner.cpp').read_text())
-    text = normalize_v46ak_runner(text)
-    text = normalize_v46al_runner(text)
-    text = normalize_current_observation(text)
+    text = normalize_current_observation((ROOT / 'src/experiment_runner.cpp').read_text())
     text = normalize_v46ac_runner(text)
     text = normalize_v46ab_runner(text)
     text = normalize_v46aa_runner(text)

@@ -337,17 +337,6 @@ class PsramLogger {
     bool side_mismatch_diagnostic = false;
     uint8_t phase = 0;
     float free_next_peak_amplitude_deg = NAN;
-    float p1_free_peak_before_rate_deg = NAN;
-    float rate_baseline_peak_deg = NAN;
-    float rate_baseline_correction_deg = NAN;  // retired P1-difference column
-    uint8_t rate_baseline_reason = 255;
-    // V46al previous-peak control metadata only; RWLOG time-series layout stays v51.
-    float free_next_peak_before_previous_peak_correction_deg = NAN;
-    float previous_peak_control_raw_correction_deg = NAN;
-    float previous_peak_control_correction_deg = 0.0f;
-    uint8_t previous_peak_control_reason = 255;
-    bool previous_peak_control_applied = false;
-    bool previous_peak_control_clamped = false;
     float passive_energy_j = NAN;
     float target_peak_deg = NAN;
     float target_energy_j = NAN;
@@ -373,19 +362,6 @@ class PsramLogger {
     bool command_matches_zero_cross_motion = false;
     uint16_t vbat_mV = 0;
     float i0_estimated_mA = NAN;
-
-    // V46ak observation-only snapshot taken before the pulse command is queued.
-    // These fields are never consulted by the controller or pulse solver.
-    uint32_t pre_input_capture_time_us = 0;
-    float pre_input_measured_current_mA = NAN;
-    uint32_t pre_input_current_sample_time_us = 0;
-    uint32_t pre_input_current_age_us = UINT32_MAX;
-    bool pre_input_current_valid = false;
-    float pre_input_wheel_speed_rpm = NAN;
-    uint32_t pre_input_wheel_speed_sample_time_us = 0;
-    uint32_t pre_input_wheel_speed_age_us = UINT32_MAX;
-    bool pre_input_wheel_speed_valid = false;
-
     float solver_required_width_ms = NAN;
     uint16_t solver_selected_integer_width_ms = 0;
     int16_t command_current_mA = 0;
@@ -492,7 +468,8 @@ class PsramLogger {
                 uint8_t q_probe_schedule_id = 0, bool passive_capture = false,
                  float q1_shadow_target_peak_abs_deg = NAN, bool q_ident_mode = false,
                  uint8_t q_ident_run_schedule_id = 0, bool energy_control_v0_mode = false,
-                 bool energy_control_autonomous_mode = false);
+                 bool energy_control_autonomous_mode = false,
+                 uint32_t autonomous_timing_compensation_us = 0);
   uint16_t beginIdentificationEvent(const IdentificationEvent& event);
   void finishIdentificationEvent(uint16_t event_id, uint32_t peak_ms, int16_t theta_peak_cdeg);
   void addCalibrationPeakEvent(const CalibrationPeakEvent& event);
@@ -578,7 +555,6 @@ class PsramLogger {
   void markEnergyControlV0EventOverflow() { energy_control_v0_event_overflow_ = true; }
   void setCalibrationResult(const CalibrationResult& result);
   void markMeasurementDone();
-  bool prepareRwLog();
 
   bool ready() const { return ready_; }
   const char* lastError() const { return last_error_; }
@@ -586,33 +562,14 @@ class PsramLogger {
   uint64_t runStartUs() const { return run_start_us_; }
   bool lastMeasurementDone() const { return last_measurement_done_; }
   bool downloading() const { return downloading_; }
-  bool rwlogPrepared() const { return rwlog_prepared_; }
-  bool rwlogPrepareAttempted() const { return rwlog_prepare_attempted_; }
-  const char* rwlogPrepareState() const { return rwlog_prepare_state_; }
-  size_t preparedMetadataBytes() const { return prepared_metadata_.length(); }
-  size_t preparedTotalBytes() const { return prepared_total_size_; }
-  uint32_t prepareMetadataUs() const { return prepare_metadata_us_; }
-  uint32_t prepareCrcUs() const { return prepare_crc_us_; }
-  uint32_t prepareTotalUs() const { return prepare_total_us_; }
 
   bool addSample(const LogSample& row);
-  bool addAutonomousSample(const AutonomousCompactSample& row);
-  bool addPulseAuditSample(const PulseAuditSample& row);
 
-  size_t sampleCount() const { return energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_; }
-  size_t sampleCapacity() const { return energy_control_autonomous_mode_ ? autonomous_sample_capacity_ : sample_capacity_; }
-  size_t autonomousSampleCount() const { return autonomous_sample_count_; }
-  size_t autonomousSampleCapacity() const { return autonomous_sample_capacity_; }
-  size_t pulseAuditCount() const { return pulse_audit_count_; }
-  size_t pulseAuditCapacity() const { return pulse_audit_capacity_; }
-  bool pulseAuditFull() const { return pulse_audit_count_ >= pulse_audit_capacity_; }
+  size_t sampleCount() const { return sample_count_; }
+  size_t sampleCapacity() const { return sample_capacity_; }
   uint8_t usagePercent() const;
   bool warningLevel() const;
-  bool full() const {
-    return energy_control_autonomous_mode_
-        ? autonomous_sample_count_ >= autonomous_sample_capacity_
-        : sample_count_ >= sample_capacity_;
-  }
+  bool full() const { return sample_count_ >= sample_capacity_; }
   bool rwlogDownloadable() const;
   void downloadFilename(char* out, size_t out_len) const;
 
@@ -631,12 +588,6 @@ private:
   LogSample* samples_ = nullptr;
   size_t sample_capacity_ = 0;
   size_t sample_count_ = 0;
-  AutonomousCompactSample* autonomous_samples_ = nullptr;
-  size_t autonomous_sample_capacity_ = 0;
-  size_t autonomous_sample_count_ = 0;
-  PulseAuditSample* pulse_audit_samples_ = nullptr;
-  size_t pulse_audit_capacity_ = 0;
-  size_t pulse_audit_count_ = 0;
   uint16_t current_run_id_ = 0;
   uint64_t run_start_us_ = 0;
   int16_t run_current_mA_ = 0;
@@ -688,16 +639,6 @@ private:
   uint16_t timing_probe_event_count_ = 0;
   bool timing_probe_event_overflow_ = false;
   CalibrationResult calibration_result_;
-  String prepared_metadata_;
-  RwLogFileHeader prepared_header_{};
-  uint32_t prepared_crc_ = 0;
-  size_t prepared_total_size_ = 0;
-  uint32_t prepare_metadata_us_ = 0;
-  uint32_t prepare_crc_us_ = 0;
-  uint32_t prepare_total_us_ = 0;
-  bool rwlog_prepare_attempted_ = false;
-  bool rwlog_prepared_ = false;
-  const char* rwlog_prepare_state_ = "not_prepared";
   bool last_measurement_done_ = false;
   bool downloading_ = false;
   bool ready_ = false;

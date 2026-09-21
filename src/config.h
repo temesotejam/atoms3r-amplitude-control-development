@@ -93,7 +93,7 @@ static constexpr uint32_t MEKF_CONTROL_PREDICTION_FIXED_US = 2500UL;
 static constexpr uint32_t MEKF_CONTROL_PREDICTION_MAX_US = 10000UL;
 // V46ac autonomous timing compensation begin
 // Lightweight actuator-delay compensation for Autonomous timing only.
-// V46aj: fixed 3.0 ms; no runtime selection or per-run timing setting.
+// Default 3.0 ms; V46ad snapshots the stopped-state 0/3/6/9 ms selection per run.
 // It predicts the posterior measurement-relative pitch forward by that delay
 // using the bias-corrected, MEKF-scaled Y gyro rate.
 static constexpr uint32_t ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US = 3000UL;
@@ -120,31 +120,7 @@ static constexpr uint32_t MADGWICK_SETTLING_MS = 5000UL;
 // Dedicated manual-release capture. The first window is held static by the
 // operator; it is metadata, not a per-run angle-zero operation.
 static constexpr char PASSIVE_CAPTURE_FIRMWARE_REVISION[] = "energy_control_autonomous_v7_side_response_correction_20260904";
-static constexpr char ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920";
-// V46ak changes observation only. ATTITUDE_VALIDATION_REVISION intentionally remains V46aj.
-static constexpr char AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920";
-// V46al previous-peak active control begin
-static constexpr char AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921";
-static constexpr char RWLOG_DOWNLOAD_REVISION[] = "v46at_partial_write_safe_20260921";
-static constexpr char RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921";
-static constexpr char ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION[] =
-    "V46AK_5RUN_8DEG_10TO30S_PREV_RESIDUAL_20260921";
-static constexpr bool ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_CONTROL_ENABLED = true;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_TARGET_DEG = 8.0f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_TARGET_TOLERANCE_DEG = 0.01f;
-static constexpr uint32_t ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_ENABLE_AFTER_MS = 10000UL;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MAX_ABS_CORRECTION_DEG = 0.70f;
-// Fit on five V46ak 8 deg runs, using only 10--30 s. Residual = actual - V46ak prediction.
-// The fit is side-specific and is applied only inside the measured previous-peak support.
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_C_AT_8_DEG = 0.591392151f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_K_PER_DEG = -0.442636343f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_SUPPORT_MIN_DEG = 7.19424f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_PLUS_SUPPORT_MAX_DEG = 9.34474f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_C_AT_8_DEG = -0.157912422f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_K_PER_DEG = 0.585367534f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MIN_DEG = 6.95706f;
-static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MAX_DEG = 8.75588f;
-// V46al previous-peak active control end
+static constexpr char ATTITUDE_VALIDATION_REVISION[] = "v46ad_delay_compensation_sweep_20260919";
 static constexpr float MEKF_GYRO_Y_SCALE = 0.908911f;
 static constexpr uint32_t PASSIVE_CAPTURE_DURATION_MS = 60000UL;
 static constexpr uint32_t PASSIVE_STATIC_WINDOW_MS = 3000UL;
@@ -275,7 +251,7 @@ static constexpr uint8_t ENERGY_CONTROL_V0_INVALID_NONALTERNATING_SIDE = 11;
 static constexpr uint8_t ENERGY_CONTROL_V0_INVALID_EVENT_LOG_OVERFLOW = 12;
 
 // Autonomous Energy Control V7: one startup-only strong kick is followed by
-// direct rate-baseline/Q1 control on accepted physical half-cycles. The V5
+// direct normal P1/Q1 energy control on accepted physical half-cycles. The V5
 // event policy separates raw detector candidates from accepted physical events
 // so pulse transients cannot self-trigger the next control cycle.
 static constexpr char ENERGY_CONTROL_AUTONOMOUS_MEASUREMENT_MODE[] =
@@ -295,10 +271,9 @@ static constexpr int16_t ENERGY_CONTROL_AUTONOMOUS_CURRENT_MA = 300;
 static constexpr uint16_t ENERGY_CONTROL_AUTONOMOUS_MIN_PULSE_MS = 0;
 static constexpr uint16_t ENERGY_CONTROL_AUTONOMOUS_MAX_PULSE_MS = 100;
 
-// V46ae: retain the historical V7 fit for provenance, but do not apply a
-// gyro-integral-coordinate residual to the new MEKF posterior amplitude.
-// Geometric potential, base Q1 gains and per-side error integrators remain active.
-static constexpr bool ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_CORRECTION_ENABLED = false;
+// V7: bounded side-response residual correction fitted in firmware peak coordinates
+// from three V6 target-8 closed-loop runs. It augments, never replaces, P1/Q1.
+static constexpr bool ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_CORRECTION_ENABLED = true;
 static constexpr char ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_CORRECTION_SOURCE[] =
     "V6_three_run_closed_loop_20260904";
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_BLEND_LAMBDA = 0.5f;
@@ -308,8 +283,10 @@ static constexpr float ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_FIT_G_PLUS_DEG_PE
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_FIT_C_MINUS_DEG = -1.239921640f;
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_SIDE_RESPONSE_FIT_G_MINUS_DEG_PER_MAS = 0.6580326445f;
 
-// V46ae amplitude is abs(posterior_MEKF - measurement_start_posterior).
-// MEKF_GYRO_Y_SCALE already calibrates the filter input; never scale its angle again.
+// The start-referenced scaled +gy integral supplies the absolute energy peak
+// amplitude.  It is not used to detect central passage.
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_GYRO_TO_VIDEO_PEAK_SCALE = 0.908911f;
+static constexpr uint32_t ENERGY_CONTROL_AUTONOMOUS_GYRO_INTEGRATION_MAX_DT_US = 25000UL;
 // A continuous adopted-angle extremum plus this many rate-confirming returning
 // samples defines one physical peak.  No rate or amplitude acceptance minimum
 // is introduced.
@@ -319,10 +296,13 @@ static constexpr uint8_t ENERGY_CONTROL_AUTONOMOUS_PEAK_CONFIRM_SAMPLES = 3;
 // the measured 0.317--0.490 s passive half-cycle range.
 static constexpr uint32_t ENERGY_CONTROL_AUTONOMOUS_MIN_HALF_CYCLE_MS = 250UL;
 static constexpr uint32_t ENERGY_CONTROL_AUTONOMOUS_MIN_ZERO_TO_PEAK_MS = 125UL;
-// V46ai free-peak prediction: nonnegative side-specific zero-cross rate formula.
-// The geometric potential remains the angle/energy conversion for the solver.
+// P1 free-decay model: F_s(A)=U_P1^-1(alpha*U_P1(A)-Ec), A>=0 deg.
+// It is amplitude-side-independent (F_+=F_-); side is used for signed peak
+// identity and the existing side-specific Q augmentation gain.
 static constexpr char ENERGY_CONTROL_AUTONOMOUS_FREE_MODEL_REVISION[] =
-    "ZERO_CROSS_RATE_ONLY_NONNEGATIVE_20260919";
+    "P1_STEP_energy_alpha_0p870671664_Ec_0_20260828";
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_P1_FREE_DECAY_ALPHA = 0.8706716644111074f;
+static constexpr float ENERGY_CONTROL_AUTONOMOUS_P1_FREE_DECAY_EC_J = 0.0f;
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_INTEGRAL_KI_MAS_PER_DEG = 0.10f;
 static constexpr uint16_t ENERGY_CONTROL_AUTONOMOUS_MAX_EVENTS = 256;
 static constexpr uint8_t ENERGY_CONTROL_AUTONOMOUS_REASON_NONE = 0;
@@ -819,12 +799,7 @@ static constexpr uint32_t BETA_SWEEP_TOTAL_DURATION_MS =
     BETA_SWEEP_TRIAL_COUNT * BETA_SWEEP_TRIAL_DURATION_MS +
     (BETA_SWEEP_TRIAL_COUNT - 1) * BETA_SWEEP_INTER_TRIAL_REST_MS;
 
-// V46ap: the 258-byte full time-series row is now kept at the normal 50 Hz only.
-// 1 MiB holds >80 s at 50 Hz, comfortably above the fixed 30 s Autonomous run.
-// High-rate pulse current/wheel observations have their own compact PSRAM buffer.
-static constexpr size_t LOG_BUFFER_BYTES = 1UL * 1024UL * 1024UL;
-static constexpr size_t AUTONOMOUS_LOG_BUFFER_BYTES = 128UL * 1024UL;
-static constexpr size_t PULSE_AUDIT_BUFFER_BYTES = 512UL * 1024UL;
+static constexpr size_t LOG_BUFFER_BYTES = 6UL * 1024UL * 1024UL;
 static constexpr uint8_t BUFFER_WARNING_PERCENT = 90;
 
 }  // namespace Config

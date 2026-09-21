@@ -66,8 +66,8 @@ for token in (
 solver_region = runner[solver_pos:runner.index("logger_->addEnergyControlAutonomousZeroCrossEvent(event);", solver_pos)]
 assert "pre_input_" not in solver_region
 
-# Time-series binary layout stays frozen at RWLOG v51; additions are metadata-event only.
-assert "RWLOG_FORMAT_VERSION = 51" in logger_cpp
+# Legacy full-row layout remains v51; current Autonomous uses dedicated compact v52.
+assert "RWLOG_FORMAT_VERSION_LEGACY = 51" in logger_cpp
 assert "sizeof(LogSample) == 258" in (ROOT / "src/log_types.h").read_text(encoding="utf-8")
 assert "amplitude_control_observation_revision" in logger_cpp
 assert "observation_only_never_read_by_control" in logger_cpp

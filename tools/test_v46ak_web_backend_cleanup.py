@@ -48,13 +48,13 @@ for name in removed_handlers:
 
 # The idle status document contains exactly the data families rendered by the new UI.
 required_status_keys = (
-    '"running"', '"downloading"', '"state"', '"ready"',
-    '"energy_control_autonomous_target_peak_deg"',
-    '"pitch_mekf_control_deg"', '"physical_roll_rate_dps"',
-    '"motor_cmd_mA"', '"remaining_s"',
-    '"rwlog_downloadable"', '"download_filename"',
-    '"imu_ok"', '"roller_ok"', '"roller_actual_current_mA"',
-    '"battery_mV"', '"last_error"',
+    "running", "downloading", "state", "ready",
+    "energy_control_autonomous_target_peak_deg",
+    "pitch_mekf_control_deg", "physical_roll_rate_dps",
+    "motor_cmd_mA", "remaining_s",
+    "rwlog_downloadable", "download_filename",
+    "imu_ok", "roller_ok", "roller_actual_current_mA",
+    "battery_mV", "last_error",
 )
 for key in required_status_keys:
     assert key in status, key

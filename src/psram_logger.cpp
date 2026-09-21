@@ -835,7 +835,7 @@ String PsramLogger::buildMetadataJson() const {
   json += "\"roller_current_age_us_semantics\":\"time_since_last_successful_CURRENT_READBACK;4294967295_means_unknown\",";
   json += "\"roller_q_meas_observed_semantics\":\"absolute_current_trapezoid_over_adjacent_fresh_samples_inside_active_pulse_only;edge_intervals_are_not_estimated;diagnostic_not_total_physical_Q\",";
   json += "\"roller_q_meas_observed_valid_semantics\":\"at_least_two_fresh_active_pulse_samples_and_no_fast_current_read_failure_in_that_pulse;does_not_authorize_control\",";
-  json += "\"pulse_q_target_pred_semantics\":\"normal_V7_selected_q_command_and_q_effective_pred_only;START_KICK_is_null\",";  json += "\"format_version\":" + String(RWLOG_FORMAT_VERSION) + ",";
+  json += "\"pulse_q_target_pred_semantics\":\"normal_V7_selected_q_command_and_q_effective_pred_only;START_KICK_is_null\",";  json += "\"format_version\":" + String(RWLOG_FORMAT_VERSION_LEGACY) + ",";
   json += "\"calibration_algorithm_revision\":\"v61_state_feedback_rebuild_fixed_q_v51_video_hfree\",";
   json += "\"shadow_forward_model_version\":\"" + String(Config::ZERO_CROSS_V57_FORWARD_MODEL_VERSION) + "\",";
   json += "\"shadow_model_version\":\"" + String(Config::ZERO_CROSS_V57_INVERSE_SHADOW_VERSION) + "\",";

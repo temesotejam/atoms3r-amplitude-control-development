@@ -11,7 +11,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AtomS3R Amplitude Control</title><style>
 body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}header{padding:16px;background:#263341;color:#fff}header h1{font-size:1.25rem;margin:0 0 5px}header div{font-size:.84rem;opacity:.85}main{padding:14px;max-width:620px;margin:auto}.card{border:1px solid #c5ced8;background:#fff;padding:14px;border-radius:8px;margin:12px 0}.card h2{font-size:1rem;margin:0 0 10px}.status{font-size:.95rem;line-height:1.55}.error{color:#a11d27;font-weight:600}.note{font-size:.88rem;line-height:1.5;color:#536273;margin:8px 0}button,select,a.action{box-sizing:border-box;width:100%;margin-top:10px;border:1px solid #b8c2ce;padding:11px;border-radius:6px;font-size:16px}button,a.action{background:#1769e0;color:#fff;text-align:center;text-decoration:none}select{background:#fff;color:#17202a}button.danger{background:#c4262e;border-color:#c4262e}button.secondary{background:#566575;border-color:#566575}button:disabled,select:disabled,a.action.disabled{opacity:.42;pointer-events:none}[hidden]{display:none!important}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}details{margin-top:10px;font-size:.9rem}code{font-size:.9em}@media(max-width:520px){.row{grid-template-columns:1fr}}</style></head><body>
-<header><h1>AtomS3R Amplitude Control</h1><div>V46ap / 0.46.41 — V46al control + compact RWLOG logging</div></header>
+<header><h1>AtomS3R Amplitude Control</h1><div>V46aq / 0.46.42 — V46al download path + compact RWLOG</div></header>
 <main>
   <section class="card">
     <h2>状態</h2>
@@ -32,15 +32,14 @@ body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}
 
   <section class="card">
     <h2>測定ログ</h2>
-    <p class="note">測定終了後、次のRunを始める前にRWLOGを保存してください。ダウンロード中は他の状態通信を停止し、途中切断時はHTTP Rangeで続きから再開します。</p>
-    <a id="rwlog" class="action" href="/download/rwlog" download onclick="return beginNativeRwlogDownload()">Download RWLOG</a>
-    <button id="resumeDownload" class="secondary" hidden onclick="resumeUiAfterDownload()">Resume UI after download</button>
+    <p class="note">測定終了後、次のRunを始める前にRWLOGを保存してください。ダウンロード方式はV46alで使用していた単純な直接ダウンロードへ戻しています。</p>
+    <a id="rwlog" class="action" href="/download/rwlog" onclick="beginDownload()">Download RWLOG</a>
     <button id="clear" class="secondary" onclick="postClear()">Clear log memory</button>
   </section>
 </main>
 <script>
 let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0,statusController=null;
-const energy=document.getElementById('energy'),energyTarget=document.getElementById('energyTarget'),stop=document.getElementById('stop'),clear=document.getElementById('clear'),rwlog=document.getElementById('rwlog'),resumeDownload=document.getElementById('resumeDownload');
+const energy=document.getElementById('energy'),energyTarget=document.getElementById('energyTarget'),stop=document.getElementById('stop'),clear=document.getElementById('clear'),rwlog=document.getElementById('rwlog');
 
 function lock(e,v){if(e.tagName==='A')e.classList.toggle('disabled',v);else e.disabled=v;}
 async function post(path){const r=await fetch(path,{method:'POST'});if(!r.ok)alert(await r.text());await refresh();return r.ok;}
@@ -58,21 +57,12 @@ async function postStop(){displayFrozen=false;await post('/stop');}
 async function postClear(){if(confirm('現在のログを消去しますか？'))await post('/clear');}
 async function setEnergyTarget(){await post('/energy-control-autonomous/target?deg='+encodeURIComponent(energyTarget.value));}
 
-function beginNativeRwlogDownload(){
+function beginDownload(){
   if(downloading||rwlog.classList.contains('disabled'))return false;
   downloading=true;
-  if(statusController){statusController.abort();statusController=null;refreshInFlight=false;}
-  rwlog.textContent='RWLOG download active';
-  resumeDownload.hidden=false;
   apply(lastStatus);
-  document.getElementById('summary').textContent='RWLOG DOWNLOAD ACTIVE | status polling paused';
+  setTimeout(()=>{downloading=false;refresh();},3000);
   return true;
-}
-function resumeUiAfterDownload(){
-  downloading=false;
-  rwlog.textContent='Download RWLOG';
-  resumeDownload.hidden=true;
-  refresh();
 }
 
 function apply(j){
@@ -136,8 +126,6 @@ void WebUi::begin(WebServer& server, ExperimentRunner& runner, ImuManager& imu, 
   server_->on("/current-roll/target", HTTP_POST, [this]() { handleSetCurrentRollTarget(); });
   server_->on("/q1-shadow/target", HTTP_POST, [this]() { handleSetQ1ShadowTargetPeakAbs(); });
   server_->on("/download/rwlog", HTTP_GET, [this]() { handleRwLog(); });
-  const char* collected_headers[] = {"Range"};
-  server_->collectHeaders(collected_headers, 1);
   server_->enableDelay(false);  // Empty HTTP polls must not add sleeps to idle acquisition.
   server_->begin();
 }

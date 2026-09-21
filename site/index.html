@@ -4,20 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>AtomS3R Amplitude Control Development — V46an native download</title>
+  <title>AtomS3R Amplitude Control Development — V46ao resumable download</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46an NATIVE DOWNLOAD</p>
-      <h1>Amplitude Control Development<br><span>Native RWLOG Download</span></h1>
-      <p class="lead">V46alの実制御とV46amの部分書き込み対応をそのままに、ブラウザ側をnative downloadへ戻したV46an / 0.46.39です。ダウンロード中はstatus pollingを完全停止し、Resume UIを押すまで再開しません。</p>
+      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46ao RANGE RESUME</p>
+      <h1>Amplitude Control Development<br><span>Resumable RWLOG Download</span></h1>
+      <p class="lead">V46alの実制御、V46amの部分書き込み対応、V46anのnative downloadを維持し、途中切断時にHTTP Rangeで続きから再開できるV46ao / 0.46.40です。</p>
       <div class="badges"><span>ESP32-S3</span><span>BMI270 400/200 Hz</span><span>RWLOG v51</span><span>MEKF amplitude</span><span>3 ms compensation</span></div>
     </header>
     <section class="panel important">
-      <h2>Native Download版：V46an / 0.46.39</h2>
+      <h2>Range Resume版：V46ao / 0.46.40</h2>
       <p>姿勢推定・ZEROクロス3 ms補償・ピーク検出・Qゲイン・Ki・電流モデル・fast solver・300 mA/最大100 ms・ESTOPは維持しています。変更点は、8°制御の10秒以降で、直前ピークが5 Runの測定範囲内にある場合だけ次ピーク予測へ最大±0.70°の補正を加えることです。</p>
       <p><strong>測定条件：遅延補償3 ms固定・目標8°・30秒。</strong>開始姿勢と撮影条件をそろえてください。補償時間の設定は不要です。各Run終了後、<strong>次の開始前にRWLOGと動画を保存</strong>してください。</p>
       <p>300 mA・最大100 ms、起動パルス、非常停止、IMU取得、LED同期は維持しています。目標8°への振幅が改善するかを実機で確認する試験版です。</p>
@@ -29,7 +29,7 @@
       <h2>このページから直接書き込めます</h2>
       <p>AtomS3R を USB でPCへ接続し、Chrome または Edge のデスクトップ版で下のボタンを押してください。</p>
       <esp-web-install-button manifest="manifest.json">
-        <button slot="activate" class="primary">AtomS3RへV46anを書き込む</button>
+        <button slot="activate" class="primary">AtomS3RへV46aoを書き込む</button>
         <span slot="unsupported" class="warning">このブラウザはWeb Serial / WebUSBに対応していません。PC版ChromeまたはEdgeを使用してください。</span>
       </esp-web-install-button>
       <details>
@@ -81,7 +81,7 @@
       <p>Attitude revision: <code>v46aj_fixed_3ms_compensation_20260920</code></p>
     </section>
 
-    <footer>atoms3r-amplitude-control-development / V46an native download</footer>
+    <footer>atoms3r-amplitude-control-development / V46ao resumable download</footer>
   </main>
   <script>
     fetch('build-sha.txt', {cache: 'no-store'})

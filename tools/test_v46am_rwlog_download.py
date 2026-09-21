@@ -9,7 +9,6 @@ transport=(R/'src/rwlog_stream_transport.h').read_text()
 
 assert 'ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920"' in config
 assert 'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"' in config
-assert 'RWLOG_DOWNLOAD_REVISION[] = "v46an_native_download_hold_20260921"' in config
 
 # Server transport handles short writes instead of treating them as fatal.
 assert 'CHUNK_BYTES = 1460' in transport

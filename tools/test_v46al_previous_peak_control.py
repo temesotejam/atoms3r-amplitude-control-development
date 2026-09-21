@@ -45,7 +45,7 @@ for token in (
 ):
     assert token in logger_h and token in logger and token in converter
 
-assert 'RWLOG_FORMAT_VERSION = 51' in logger
+assert 'RWLOG_FORMAT_VERSION_LEGACY = 51' in logger
 assert 'sizeof(LogSample) == 258' in (R/'src/log_types.h').read_text()
 
 code=r'''

@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify V46al-R1 active layer and retained V46ak/V46aj envelope
+      - name: Verify V46al-R2 active layer and retained V46ak/V46aj envelope
         run: |
           set -euxo pipefail
           python tools/test_v46u_timing.py
@@ -39,7 +39,7 @@ jobs:
           python tools/test_v46ak_pre_input_observation.py
           python tools/test_v46ak_web_backend_cleanup.py
           python tools/test_v46ak_download_freeze.py
-          python tools/test_v46al_r1_previous_peak_control.py
+          python tools/test_v46al_r2_previous_peak_control.py
       - name: Run retained native acquisition, startup, control and MEKF tests
         run: |
           set -euxo pipefail
@@ -54,7 +54,7 @@ jobs:
           python -m json.tool site/manifest.json >/dev/null
       - name: Install PlatformIO
         run: pip install platformio
-      - name: Build V46al-R1 firmware on frozen V46ak/V46aj baseline
+      - name: Build V46al-R2 firmware on frozen V46ak/V46aj baseline
         run: |
           set -euxo pipefail
           pio pkg install -e atoms3cam
@@ -70,12 +70,12 @@ jobs:
           cp bmi270-build-patch.json dist/
           python "$HOME/.platformio/packages/tool-esptoolpy/esptool.py" --chip esp32s3 merge_bin -o dist/merged-firmware.bin 0x0000 dist/bootloader.bin 0x8000 dist/partitions.bin 0xe000 dist/boot_app0.bin 0x10000 dist/firmware.bin
           printf '%s\n' "$GITHUB_SHA" > dist/build-sha.txt
-          printf '%s\n' 'V46al-R1 0.46.41; stable baseline bb9c5ed07c5ca8b3c6c6b5813b6c2f1b1f57a6ec; V46ak rate-only baseline plus bounded A_prev residual correction for 8deg after 10s within side support; MEKF, fixed 3ms compensation, Ki, current model, solver, 300mA/100ms envelope, ESTOP, RWLOG v51 and download transport retained' > dist/FLASH_LAYOUT.txt
+          printf '%s\n' 'V46al-R2 0.46.42; stable baseline bb9c5ed07c5ca8b3c6c6b5813b6c2f1b1f57a6ec; bounded A_prev residual correction active; logger.cpp/h and converter restored byte-for-byte to stable; MEKF, fixed 3ms compensation, Ki, current model, solver, 300mA/100ms envelope, ESTOP, RWLOG v51 and download transport retained' > dist/FLASH_LAYOUT.txt
           (cd dist && sha256sum *.bin > SHA256SUMS.txt)
           git diff --exit-code
       - uses: actions/upload-artifact@v4
         with:
-          name: atoms3r-v46al-r1-${{ github.sha }}
+          name: atoms3r-v46al-r2-${{ github.sha }}
           path: dist/
           if-no-files-found: error
           retention-days: 30

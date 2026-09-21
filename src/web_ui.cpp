@@ -8,23 +8,239 @@
 extern RunControlWorker run_control;
 
 static const char INDEX_HTML[] PROGMEM = R"HTML(
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Autonomous Energy Control V7</title><style>
-body{margin:0;font-family:system-ui,sans-serif;background:#f6f8fb;color:#17202a}header{padding:14px 16px;background:#263341;color:#fff}main{padding:14px;max-width:700px;margin:auto}.card{border:1px solid #b8c2ce;background:#fff;padding:14px;border-radius:7px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{background:#f6f8fb;border-radius:5px;padding:9px}.metric b{display:block;font-size:1.18rem}.yes{color:#087d2f}.no{color:#a11d27}button,a,select,input{box-sizing:border-box;width:100%;margin-top:10px;border:1px solid #b8c2ce;background:#1769e0;color:#fff;padding:11px;border-radius:6px;font-size:16px;text-align:center;text-decoration:none}select{background:#fff;color:#17202a}button.danger{background:#c4262e;border-color:#c4262e}button:disabled,a.disabled,select:disabled{opacity:.42;pointer-events:none}small{display:block;line-height:1.45;margin:9px 0;color:#536273}</style></head><body>
-<header><h1>Autonomous Energy Control V7</h1><div>V46ak / 0.46.36 / V46aj control frozen / pre-input state observation</div></header><main><p id="summary">Connecting...</p>
-<div class="card"><b>起動・立位診断</b><p id="startupInfo">IMUを初期化しています</p><a href="/imu-acquisition.json">停止中のIMU診断JSON</a><p id="errorInfo"></p></div>
-<div class="card"><b>Current Roll (static-calibrated display)</b><div class="grid"><div class="metric">Physical Roll Abs<b id="abs">--</b></div><div class="metric">Current Roll<b id="current">--</b></div><div class="metric">Physical Rate<b id="rate">--</b></div><div class="metric">Target / Error<b id="targetError">--</b></div><div class="metric">STATIC<b id="static">--</b></div><div class="metric">READY<b id="ready">--</b></div></div><button id="zero" onclick="zeroCurrentRoll()">ZERO Current Roll (display only)</button><label for="target">Target Current Roll</label><select id="target" onchange="setTarget()"><option value="-15">-15 deg</option><option value="-12">-12 deg</option><option value="-8">-8 deg</option><option value="-4">-4 deg</option><option value="-1.5">-1.5 deg</option><option value="0" selected>0 deg</option><option value="1.5">+1.5 deg</option><option value="4">+4 deg</option><option value="8">+8 deg</option><option value="12">+12 deg</option><option value="15">+15 deg</option></select><small id="criteria">Display-only current-roll UI. ZERO and READY never change the V0 absolute energy target or motor command.</small></div>
-<div class="card"><b>Q1 direct next-peak shadow (motor OFF)</b><small>Q1 shadow remains a diagnostic. Its target does not affect the V0 motor command.</small><label for="shadowTarget">Q1 shadow target |A| (deg)</label><input id="shadowTarget" type="number" min="0" max="18" step="0.1" value="0.0" onchange="setShadowTarget()"></div>
-<div class="card"><b>Passive release capture (0 mA)</b><small>Records a one-release free-decay reference. All samples remain motor/current/pulse = 0.</small><button id="passive" onclick="startPassive()">Start passive capture</button></div>
-<div class="card"><b>Autonomous Energy Control V7 (actual motor)</b><small>Start upright and do not touch the machine. After the LED start signature, the firmware gives exactly one 300 mA / 100 ms strong start, waits for the first confirmed continuous-angle physical peak, then applies normal rate-baseline/Q1 Energy Control at the following delay-compensated MEKF zero-cross. Normal pulse direction matches the zero-cross physical roll-rate sign; V46aj uses uncompensated MEKF peak amplitude and MEKF-bias-corrected rate; the historical gyro-coordinate side correction is disabled; START_KICK remains direction -1. Each physical half-cycle is peak -> zero-cross -> at most one pulse -> next peak; pulse transients are never accepted as events. The Autonomous capture is 30 s. Q_IDENT, E2, the legacy V0 path, and startup pumping are not used.</small><label for="energyTarget">Walking target peak</label><select id="energyTarget" onchange="setEnergyTarget()"><option value="8" selected>8.0 deg</option><option value="10">10.0 deg</option><option value="12">12.0 deg</option></select><small id="timingInfo">遅延補償：3 ms固定</small><small>今回の測定：3 ms・8°・30秒。最初のZEROクロスから角速度だけで次ピークを予測します。遅延補償は3 ms固定です。各Run終了後、次の開始前にRWLOGと動画を保存してください。</small><button id="energy" disabled class="danger" onclick="startEnergy()">Start autonomous energy control</button></div>
-<button id="stop" class="danger" onclick="postStop()">Emergency stop</button><a id="rwlog" href="/download/rwlog" onclick="beginDownload()">Download RWLOG</a><button id="clear" onclick="postClear()">Clear log memory</button></main><script>
-let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0;const energy=document.getElementById('energy'),energyTarget=document.getElementById('energyTarget'),passive=document.getElementById('passive'),stop=document.getElementById('stop'),clear=document.getElementById('clear'),rwlog=document.getElementById('rwlog'),zero=document.getElementById('zero'),target=document.getElementById('target'),shadowTarget=document.getElementById('shadowTarget');
-const fmt=(v,n=2)=>Number.isFinite(Number(v))?`${Number(v).toFixed(n)} deg`:'--';function lock(e,v){if(e.tagName==='A')e.classList.toggle('disabled',v);else e.disabled=v;}async function post(path){const r=await fetch(path,{method:'POST'});if(!r.ok)alert(await r.text());await refresh();return r.ok;}async function startPassive(){await post('/start-passive');}async function startEnergy(){if(startPending||energy.disabled)return;startPending=true;controlEpoch++;apply(lastStatus);try{const r=await fetch('/start-energy-control-autonomous',{method:'POST'});if(!r.ok)alert(await r.text());else{displayFrozen=true;applyFrozenState();}}catch(e){alert('開始結果を確認できません。状態の再取得を待ってください。');}finally{startPending=false;controlEpoch++;refresh();}}
-async function postStop(){displayFrozen=false;await post('/stop');}async function postClear(){if(confirm('Clear the current log?'))await post('/clear');}async function zeroCurrentRoll(){await post('/current-roll/zero');}async function setTarget(){await post('/current-roll/target?deg='+encodeURIComponent(target.value));}async function setShadowTarget(){await post('/q1-shadow/target?deg='+encodeURIComponent(shadowTarget.value));}async function setEnergyTarget(){await post('/energy-control-autonomous/target?deg='+encodeURIComponent(energyTarget.value));}function beginDownload(){downloading=true;apply(lastStatus);setTimeout(()=>{downloading=false;refresh();},3000);}function mark(id,yes){const e=document.getElementById(id);e.textContent=yes?'YES':'NO';e.className=yes?'yes':'no';}
-function apply(j){const b=j.startup||{};document.getElementById('startupInfo').textContent=`${b.guide_reason||'--'} | 初期化 ${b.init_attempts||0}回 | norm=${b.accel_norm_g??'--'} g | 立位ずれ=${b.direction_error_deg??'--'}° | gyro=${b.gyro_norm_dps??'--'}°/s | age=${b.sample_age_us??'--'} us | IMU=${b.imu_error||'OK'}`;document.getElementById('errorInfo').textContent=j.last_error||'';const running=!!j.running,busy=downloading||!!j.downloading||startPending,canStart=j.state==='READY_TO_MEASURE'||j.state==='FINISHED';lock(passive,busy||running||!canStart);lock(energy,busy||running||!canStart);lock(energyTarget,busy||running||!canStart);lock(stop,!running);lock(clear,busy||running);lock(rwlog,busy||running||j.rwlog_downloadable!=='yes');lock(zero,running||!j.static_confirmed);lock(target,running);lock(shadowTarget,running);document.getElementById('summary').textContent=`${j.state||'UNKNOWN'} | passive=${!!j.passive_capture_mode} | energy_v6=${!!j.energy_control_autonomous_mode} phase=${j.energy_control_autonomous_phase||'IDLE'} target=${Number(j.energy_control_autonomous_target_peak_deg||0).toFixed(1)} deg | motor=${j.motor_cmd_mA||0} mA | actual=${j.roller_actual_current_mA||0} mA | remaining=${j.remaining_s||0} s`;document.getElementById('abs').textContent=fmt(j.physical_roll_abs_deg);document.getElementById('current').textContent=fmt(j.current_roll_deg);document.getElementById('rate').textContent=fmt(j.physical_roll_rate_dps,3)+'/s';document.getElementById('targetError').textContent=`${fmt(j.target_roll_deg)} / ${fmt(j.target_error_deg)}`;mark('static',!!j.static_confirmed);mark('ready',!!j.ready);document.getElementById('criteria').textContent=`STATIC: |rate| <= ${Number(j.static_rate_threshold_dps||0).toFixed(2)} deg/s for ${j.static_hold_time_ms||0} ms. READY: display-only.`;if(document.activeElement!==target){const value=String(j.target_roll_deg);if([...target.options].some(o=>o.value===value))target.value=value;}if(document.activeElement!==shadowTarget&&Number.isFinite(Number(j.q1_shadow_target_peak_abs_deg)))shadowTarget.value=Number(j.q1_shadow_target_peak_abs_deg).toFixed(1);if(document.activeElement!==energyTarget&&Number.isFinite(Number(j.energy_control_autonomous_target_peak_deg)))energyTarget.value=String(Number(j.energy_control_autonomous_target_peak_deg));}
-function applyFrozenState(){[passive,energy,energyTarget,clear,rwlog,zero,target,shadowTarget].forEach(x=>lock(x,true));lock(stop,false);document.getElementById('summary').textContent='MEASUREMENT RUNNING | lightweight state heartbeat';}
-async function refresh(){if(refreshInFlight)return;refreshInFlight=true;const epoch=controlEpoch;let timer;try{const controller=new AbortController();timer=setTimeout(()=>controller.abort(),1500);const r=await fetch('/status.json',{cache:'no-store',signal:controller.signal});clearTimeout(timer);if(!r.ok)throw new Error('status_failed');const status=await r.json();if(epoch!==controlEpoch)return;lastStatus=status;if(lastStatus.running){displayFrozen=true;applyFrozenState();return;}if(displayFrozen)displayFrozen=false;apply(lastStatus);}catch(e){if(!displayFrozen)[energy,energyTarget,passive,stop,clear,rwlog,zero,target,shadowTarget].forEach(x=>lock(x,true));}finally{if(timer)clearTimeout(timer);refreshInFlight=false;}}setInterval(refresh,1000);refresh();
-</script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AtomS3R Amplitude Control</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17202a;background:#f4f6f8}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6f8}
+header{background:#202a35;color:#fff;padding:18px 18px 16px}
+header h1{font-size:1.25rem;margin:0 0 4px}
+header p{margin:0;color:#c9d1d9;font-size:.86rem}
+main{max-width:680px;margin:0 auto;padding:14px}
+.card{background:#fff;border:1px solid #d9dee5;border-radius:10px;padding:15px;margin-bottom:12px}
+.card h2{font-size:1rem;margin:0 0 12px}
+.state{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.state strong{font-size:1.08rem}
+.pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef2f6;font-size:.78rem;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metric{background:#f6f8fa;border-radius:8px;padding:10px}
+.metric span{display:block;color:#66717d;font-size:.76rem;margin-bottom:3px}
+.metric b{font-size:1.03rem}
+.note{color:#66717d;font-size:.86rem;line-height:1.55;margin:8px 0 0}
+.error{color:#b42318;font-size:.86rem;min-height:1.2em;margin:8px 0 0}
+button,a.action{display:block;width:100%;border:0;border-radius:8px;padding:12px 14px;margin-top:10px;font-size:1rem;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
+.primary{background:#1769e0;color:#fff}
+.secondary,a.action{background:#eef2f6;color:#17202a}
+.danger{background:#c4262e;color:#fff}
+button:disabled,a.disabled{opacity:.4;pointer-events:none;cursor:default}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fixed{padding:10px 12px;border-radius:8px;background:#f6f8fa;font-size:.9rem;line-height:1.55}
+footer{text-align:center;color:#87919c;font-size:.76rem;padding:4px 0 14px}
+@media(max-width:480px){.row{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <h1>AtomS3R Amplitude Control</h1>
+  <p>V46ak / 0.46.36 — Web UI cleanup only</p>
+</header>
+<main>
+  <div class="card">
+    <div class="state">
+      <div>
+        <h2 style="margin-bottom:4px">現在の状態</h2>
+        <strong id="stateText">接続中...</strong>
+      </div>
+      <span id="readyBadge" class="pill">--</span>
+    </div>
+    <div class="grid">
+      <div class="metric"><span>MEKF角度</span><b id="angle">--</b></div>
+      <div class="metric"><span>角速度</span><b id="rate">--</b></div>
+      <div class="metric"><span>Motor command</span><b id="motor">--</b></div>
+      <div class="metric"><span>実電流</span><b id="actual">--</b></div>
+      <div class="metric"><span>バッテリー</span><b id="battery">--</b></div>
+      <div class="metric"><span>残り時間</span><b id="remaining">--</b></div>
+    </div>
+    <p id="systemInfo" class="note">状態を取得しています。</p>
+    <p id="errorInfo" class="error"></p>
+  </div>
+
+  <div class="card">
+    <h2>8° 振幅制御測定</h2>
+    <div class="fixed">
+      目標ピーク <b>8.0°</b> ／ 測定 <b>30秒</b> ／ 遅延補償：3 ms固定<br>
+      測定中はWeb表示の更新を最小限にし、制御処理を優先します。
+    </div>
+    <button id="energy" class="primary" disabled onclick="startEnergy()">8°測定を開始</button>
+    <button id="stop" class="danger" disabled onclick="postStop()">EMERGENCY STOP</button>
+  </div>
+
+  <div class="card">
+    <h2>測定データ</h2>
+    <p id="logInfo" class="note">RWLOGの状態を確認しています。</p>
+    <a id="rwlog" class="action disabled" href="/download/rwlog" onclick="beginDownload()">RWLOGをダウンロード</a>
+    <button id="clear" class="secondary" disabled onclick="postClear()">測定データを消去</button>
+  </div>
+</main>
+<footer>V46ak control / estimator / RWLOG logic unchanged</footer>
+<script>
+let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0;
+const energy=document.getElementById('energy');
+const stop=document.getElementById('stop');
+const clear=document.getElementById('clear');
+const rwlog=document.getElementById('rwlog');
+
+function lock(e,v){
+  if(e.tagName==='A')e.classList.toggle('disabled',v);
+  else e.disabled=v;
+}
+const num=v=>Number.isFinite(Number(v))?Number(v):null;
+const angle=v=>num(v)===null?'--':num(v).toFixed(2)+'°';
+const rate=v=>num(v)===null?'--':num(v).toFixed(2)+'°/s';
+const current=v=>num(v)===null?'--':Math.round(num(v))+' mA';
+const voltage=v=>num(v)===null?'--':(num(v)/1000).toFixed(2)+' V';
+
+async function post(path){
+  const r=await fetch(path,{method:'POST'});
+  if(!r.ok)alert(await r.text());
+  await refresh();
+  return r.ok;
+}
+
+async function startEnergy(){
+  if(startPending||energy.disabled)return;
+  startPending=true;
+  controlEpoch++;
+  apply(lastStatus);
+  try{
+    const r=await fetch('/start-energy-control-autonomous',{method:'POST'});
+    if(!r.ok)alert(await r.text());
+    else{
+      displayFrozen=true;
+      applyFrozenState();
+    }
+  }catch(e){
+    alert('開始結果を確認できません。状態の再取得を待ってください。');
+  }finally{
+    startPending=false;
+    controlEpoch++;
+    refresh();
+  }
+}
+
+async function postStop(){
+  displayFrozen=false;
+  await post('/stop');
+}
+
+async function postClear(){
+  if(confirm('現在の測定データを消去しますか？'))await post('/clear');
+}
+
+function beginDownload(){
+  downloading=true;
+  apply(lastStatus);
+  setTimeout(()=>{
+    downloading=false;
+    refresh();
+  },3000);
+}
+
+function stateLabel(j){
+  if(j.running)return '測定中';
+  if(j.state==='READY_TO_MEASURE')return '測定可能';
+  if(j.state==='FINISHED')return '測定完了';
+  if(j.state==='ESTOP')return '非常停止';
+  return j.state||'UNKNOWN';
+}
+
+function apply(j){
+  const running=!!j.running;
+  const busy=downloading||!!j.downloading||startPending;
+  const canStart=j.state==='READY_TO_MEASURE'||j.state==='FINISHED';
+
+  lock(energy,busy||running||!canStart);
+  lock(stop,!running);
+  lock(clear,busy||running);
+  lock(rwlog,busy||running||j.rwlog_downloadable!=='yes');
+
+  document.getElementById('stateText').textContent=stateLabel(j);
+  const badge=document.getElementById('readyBadge');
+  badge.textContent=j.ready?'READY':'NOT READY';
+
+  document.getElementById('angle').textContent=angle(j.pitch_mekf_control_deg);
+  document.getElementById('rate').textContent=rate(j.physical_roll_rate_dps);
+  document.getElementById('motor').textContent=current(j.motor_cmd_mA);
+  document.getElementById('actual').textContent=current(j.roller_actual_current_mA);
+  document.getElementById('battery').textContent=voltage(j.battery_mV);
+  document.getElementById('remaining').textContent=num(j.remaining_s)===null?'--':num(j.remaining_s).toFixed(1)+' s';
+
+  const imu=j.imu_ok?'IMU OK':'IMU NG';
+  const roller=j.roller_ok?'Roller OK':'Roller NG';
+  document.getElementById('systemInfo').textContent=
+    imu+' / '+roller+' / 目標 '+Number(j.energy_control_autonomous_target_peak_deg||8).toFixed(1)+'° / 遅延補償 3 ms';
+  document.getElementById('errorInfo').textContent=j.last_error||'';
+
+  if(j.rwlog_downloadable==='yes'){
+    document.getElementById('logInfo').textContent='RWLOG準備完了'+(j.download_filename?'：'+j.download_filename:'');
+  }else if(running){
+    document.getElementById('logInfo').textContent='測定中です。終了後にRWLOGを保存できます。';
+  }else{
+    document.getElementById('logInfo').textContent='保存できるRWLOGはまだありません。';
+  }
+}
+
+function applyFrozenState(){
+  [energy,clear,rwlog].forEach(x=>lock(x,true));
+  lock(stop,false);
+  document.getElementById('stateText').textContent='測定中';
+  document.getElementById('readyBadge').textContent='RUNNING';
+  document.getElementById('systemInfo').textContent='測定処理を優先しています。';
+  document.getElementById('logInfo').textContent='測定終了後にRWLOGを保存できます。';
+}
+
+async function refresh(){
+  if(refreshInFlight)return;
+  refreshInFlight=true;
+  const epoch=controlEpoch;
+  let timer;
+  try{
+    const controller=new AbortController();
+    timer=setTimeout(()=>controller.abort(),1500);
+    const r=await fetch('/status.json',{cache:'no-store',signal:controller.signal});
+    clearTimeout(timer);
+    if(!r.ok)throw new Error('status_failed');
+    const status=await r.json();
+    if(epoch!==controlEpoch)return;
+    lastStatus=status;
+    if(lastStatus.running){
+      displayFrozen=true;
+      applyFrozenState();
+      return;
+    }
+    if(displayFrozen)displayFrozen=false;
+    apply(lastStatus);
+  }catch(e){
+    if(!displayFrozen){
+      [energy,stop,clear,rwlog].forEach(x=>lock(x,true));
+      document.getElementById('stateText').textContent='通信待ち';
+    }
+  }finally{
+    if(timer)clearTimeout(timer);
+    refreshInFlight=false;
+  }
+}
+
+setInterval(refresh,1000);
+refresh();
+</script>
+</body>
+</html>
 )HTML";
 
 void WebUi::begin(WebServer& server, ExperimentRunner& runner, ImuManager& imu, Roller485Manager& roller, PsramLogger& logger) {

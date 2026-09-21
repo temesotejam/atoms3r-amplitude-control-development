@@ -1,6 +1,6 @@
 {
-  "name": "AtomS3R V46ak Pre-Input State Observation",
-  "version": "0.46.36",
+  "name": "AtomS3R V46al Previous-Peak Active Control",
+  "version": "0.46.37",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

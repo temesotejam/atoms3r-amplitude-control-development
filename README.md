@@ -50,7 +50,7 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
-## 現在の開発版: V46al-R1 / 0.46.41
+## 現在の開発版: V46al-R2 / 0.46.42
 
 実機確認済みの `atoms3r-amplitude-control-v46ak-stable` を戻り基準とし、
 V46akのZEROクロス rate-only予測に **直前ピーク `A_prev` の残差補正だけ**を追加して、
@@ -68,12 +68,12 @@ V46akのZEROクロス rate-only予測に **直前ピーク `A_prev` の残差補
 - 300 mA / 最大100 ms
 - ESTOPと安全条件
 - V46akの入力直前実電流・ホイール速度観測
-- RWLOG v51時系列レイアウト
-- 現在のRWLOGダウンロード経路
+- RWLOG logger/metadata生成・v51時系列レイアウト
+- 現在のRWLOGダウンロード経路（logger.cpp/h と converter はstableと完全一致）
 
 基準stable: `atoms3r-amplitude-control-v46ak-stable@bb9c5ed07c5ca8b3c6c6b5813b6c2f1b1f57a6ec`
 
-- [V46al-R1の変更内容](docs/V46AL_R1_PREVIOUS_PEAK_ACTIVE_CONTROL.md)
+- [V46al-R2の変更内容](docs/V46AL_R2_PREVIOUS_PEAK_ACTIVE_CONTROL.md)
 - [V46akの観測追加内容](docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md)
 - [V46ajの確定済み角度推定](docs/ATTITUDE_ESTIMATION_V46AI_JA.md)
 
@@ -81,7 +81,7 @@ V46akのZEROクロス rate-only予測に **直前ピーク `A_prev` の残差補
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現在は **V46al-R1 / 0.46.41** を書き込みます。
+現在は **V46al-R2 / 0.46.42** を書き込みます。
 
 ---
 

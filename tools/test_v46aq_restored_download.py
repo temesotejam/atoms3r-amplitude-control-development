@@ -35,7 +35,8 @@ for forbidden in (
 assert 'writeBytes(server, reinterpret_cast<const uint8_t*>(samples_)' in logger
 assert 'writeBytes(server, reinterpret_cast<const uint8_t*>(pulse_audit_samples_)' in logger
 assert 'pulse_audit_count_ * sizeof(PulseAuditSample)' in logger
-assert 'metadata_profile\\":\\\"v46ap_compact' in logger
+assert ('metadata_profile\\":\\\"v46ap_compact' in logger or
+        'metadata_profile\\":\\\"v46as_autonomous_v52' in logger)
 
 # Exact old-style browser behavior: plain anchor + short local hold.
 assert '<a id="rwlog" class="action" href="/download/rwlog" onclick="beginDownload()">Download RWLOG</a>' in web

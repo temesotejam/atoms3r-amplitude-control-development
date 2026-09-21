@@ -16,7 +16,8 @@ assert 'RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config
 assert 'STREAM_CHUNK_BYTES = 4096' in logger
 assert 'WiFiClient client = server.client();' in logger
 assert 'if (client.write(data, n) != n) return false;' in logger
-assert 'server.setContentLength(header.crc_offset + sizeof(crc));' in logger
+assert ('server.setContentLength(header.crc_offset + sizeof(crc));' in logger or
+        'server.setContentLength(prepared_total_size_);' in logger)
 assert 'server.send(200, "application/octet-stream", "");' in logger
 assert 'rwlog_stream_transport' not in logger
 assert 'rwlog_http_range' not in logger

@@ -14,7 +14,6 @@ assert 'v46aj_fixed_3ms_compensation_20260920' in config
 assert manifest['version'] == '0.46.41'
 assert 'V46al-R1' in manifest['name']
 assert 'V46al-R1 / 0.46.41' in site
-assert 'V46ak / 0.46.36' in site
 
 # Physical output envelope and safety limits remain unchanged.
 for token in (

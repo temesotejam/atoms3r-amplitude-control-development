@@ -401,7 +401,9 @@ bool PsramLogger::prepareRwLog() {
   prepare_crc_us_ = 0;
   prepare_total_us_ = 0;
 
-  if (!ready_ || run_start_us_ == 0 || sample_count_ == 0 || downloading_) {
+  const size_t active_sample_count =
+      energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_;
+  if (!ready_ || run_start_us_ == 0 || active_sample_count == 0 || downloading_) {
     rwlog_prepare_state_ = "not_ready";
     last_error_ = "rwlog_prepare_not_ready";
     return false;

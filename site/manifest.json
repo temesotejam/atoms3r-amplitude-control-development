@@ -1,6 +1,6 @@
 {
-  "name": "AtomS3R V46am RWLOG Download Stability",
-  "version": "0.46.38",
+  "name": "AtomS3R V46an Native RWLOG Download",
+  "version": "0.46.39",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

@@ -1,4 +1,5 @@
 #include "experiment_runner.h"
+#include "rate_baseline_correction.h"
 
 #include <math.h>
 
@@ -468,7 +469,7 @@ void ExperimentRunner::updateDisplayedAngles(const ImuReading& r) {
   // V46z comparison-zero end
   // V46ac delay compensation begin
   // Video comparison stays on the unpredicted posterior measurement-relative
-  // angle. Autonomous timing gets a lightweight projection fixed for this run to
+  // angle. Autonomous timing gets a lightweight projection fixed at 3 ms to
   // compensate decision + actuator-current latency.
   status_.pitch_mekf_detector_relative_deg =
       status_.pitch_mekf_measurement_relative_deg;
@@ -476,9 +477,8 @@ void ExperimentRunner::updateDisplayedAngles(const ImuReading& r) {
     const float mekf_pitch_rate_dps =
         (r.gy_dps - status_.mekf_bias_y_dps) * Config::MEKF_GYRO_Y_SCALE;
     const float compensation_s =
-        static_cast<float>(autonomous_timing_.runUs()) * 1.0e-6f;
+        static_cast<float>(Config::ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US) * 1.0e-6f;
     status_.pitch_mekf_detector_relative_deg =
-        autonomous_timing_.runUs() == 0 ? status_.pitch_mekf_measurement_relative_deg :
         (isfinite(status_.pitch_mekf_measurement_relative_deg) && isfinite(mekf_pitch_rate_dps)
             ? status_.pitch_mekf_measurement_relative_deg + mekf_pitch_rate_dps * compensation_s
             : NAN);
@@ -857,18 +857,6 @@ bool ExperimentRunner::setEnergyControlAutonomousTarget(float target_deg) {
   return true;
 }
 
-bool ExperimentRunner::setEnergyControlAutonomousTimingCompensation(uint32_t value_us) {
-  const bool stopped_and_available =
-      (status_.state == ExperimentState::READY_TO_MEASURE || status_.state == ExperimentState::FINISHED) &&
-      logger_ && !logger_->downloading();
-  if (!autonomous_timing_.select(value_us, stopped_and_available)) {
-    status_.last_error = "timing_compensation_not_selectable";
-    return false;
-  }
-  status_.last_error = "";
-  return true;
-}
-
 const char* ExperimentRunner::energyControlAutonomousPhaseName() const {
   switch (energy_control_autonomous_phase_) {
     case EnergyControlAutonomousPhase::STRONG_START_KICK: return "STRONG_START_KICK";
@@ -906,7 +894,6 @@ bool ExperimentRunner::startEnergyControlAutonomousCapture() {
   }
   g_v46_mekf_run_reinit = V46MekfRunReinitAccumulator{};
   g_v46_mekf_run_reinit.active = true;
-  autonomous_timing_.captureRun();
   energy_control_autonomous_mode_ = true;
   energy_control_autonomous_pulse_authorized_ = false;
   // V46 records only the adopted hold-073 dynamic-beta Madgwick alongside MEKF.
@@ -1131,8 +1118,7 @@ void ExperimentRunner::beginStartSync(uint32_t now_ms) {
                     static_cast<uint8_t>(q_run_mode_), centi(control_target_peak_deg_), q_probe_schedule_id_,
                     passive_capture_mode_, q1_shadow_run_target_peak_abs_deg_, q_ident_mode_,
                     q_ident_mode_ ? static_cast<uint8_t>(q_ident_run_schedule_id_ + 1) : 0,
-                     energy_control_v0_mode_, energy_control_autonomous_mode_,
-                     energy_control_autonomous_mode_ ? autonomous_timing_.runUs() : 0);
+                     energy_control_v0_mode_, energy_control_autonomous_mode_);
   last_log_us_ = 0;
   status_.state = ExperimentState::START_SYNC;
   status_.sync_event_id = 1;
@@ -2226,10 +2212,7 @@ void ExperimentRunner::resetEnergyControlAutonomous() {
   energy_control_autonomous_half_cycle_state_ = EnergyControlAutonomousHalfCycleState::WAIT_PEAK;
   energy_control_autonomous_integral_plus_mA_s_ = 0.0f;
   energy_control_autonomous_integral_minus_mA_s_ = 0.0f;
-  energy_control_autonomous_gyro_integrator_ready_ = false;
-  energy_control_autonomous_last_gyro_sample_us_ = 0;
-  energy_control_autonomous_last_gyro_rate_dps_ = 0.0f;
-  energy_control_autonomous_gyro_relative_deg_ = 0.0f;
+  energy_control_autonomous_last_motion_sample_us_ = 0;
   energy_control_autonomous_detector_has_previous_angle_ = false;
   // V46aa control-zero reset begin
   energy_control_autonomous_detector_zero_angle_deg_ = 0.0f;
@@ -2282,27 +2265,7 @@ float ExperimentRunner::energyControlPotentialJ(float amplitude_deg) const {
       (height_m - Config::ENERGY_CONTROL_V0_CG_HEIGHT_M);
 }
 
-float ExperimentRunner::energyControlAutonomousFreeNextPeakAmplitude(float amplitude_deg) const {
-  const float current_energy = energyControlPotentialJ(amplitude_deg);
-  if (!isfinite(current_energy) || current_energy < 0.0f) return NAN;
-  const float next_energy = Config::ENERGY_CONTROL_AUTONOMOUS_P1_FREE_DECAY_ALPHA * current_energy -
-      Config::ENERGY_CONTROL_AUTONOMOUS_P1_FREE_DECAY_EC_J;
-  if (!isfinite(next_energy)) return NAN;
-  if (next_energy <= 0.0f) return 0.0f;
-  const float maximum_deg = asinf(Config::ENERGY_CONTROL_V0_OUTER_EDGE_X_M /
-                                  Config::ENERGY_CONTROL_V0_RADIUS_M) * 57.295779513082320876f;
-  const float maximum_energy = energyControlPotentialJ(maximum_deg);
-  if (!isfinite(maximum_energy) || next_energy > maximum_energy) return NAN;
-  float lo = 0.0f;
-  float hi = maximum_deg;
-  for (uint8_t i = 0; i < 32; ++i) {
-    const float mid = 0.5f * (lo + hi);
-    const float mid_energy = energyControlPotentialJ(mid);
-    if (!isfinite(mid_energy)) return NAN;
-    if (mid_energy < next_energy) lo = mid; else hi = mid;
-  }
-  return 0.5f * (lo + hi);
-}
+// V46ai: free-peak prediction is provided solely by rate_baseline::evaluate.
 float ExperimentRunner::energyControlAutonomousGainForSide(int8_t physical_side) const {
   return physical_side > 0 ? Config::Q1_SHADOW_GAIN_PHYSICAL_PLUS_DEG_PER_MAS :
       Config::Q1_SHADOW_GAIN_PHYSICAL_MINUS_DEG_PER_MAS;
@@ -2582,35 +2545,23 @@ void ExperimentRunner::updateEnergyControlAutonomousMotion(uint32_t now_ms) {
   if (!energy_control_autonomous_mode_ ||
       energy_control_autonomous_phase_ == EnergyControlAutonomousPhase::IDLE ||
       energy_control_autonomous_phase_ == EnergyControlAutonomousPhase::STOP || !imu_) return;
-  const float rate_dps = status_.physical_roll_rate_dps;
-  const uint32_t sample_us = imu_->reading().last_update_us;
-  if (!isfinite(rate_dps) || sample_us == 0) return;
-  if (!energy_control_autonomous_gyro_integrator_ready_) {
-    energy_control_autonomous_gyro_integrator_ready_ = true;
-    energy_control_autonomous_last_gyro_sample_us_ = sample_us;
-    energy_control_autonomous_last_gyro_rate_dps_ = rate_dps;
-    return;
-  }
-  const uint32_t dt_us = sample_us - energy_control_autonomous_last_gyro_sample_us_;
-  if (dt_us > 0 && dt_us <= Config::ENERGY_CONTROL_AUTONOMOUS_GYRO_INTEGRATION_MAX_DT_US) {
-    energy_control_autonomous_gyro_relative_deg_ +=
-        Config::ENERGY_CONTROL_AUTONOMOUS_GYRO_TO_VIDEO_PEAK_SCALE *
-        0.5f * (energy_control_autonomous_last_gyro_rate_dps_ + rate_dps) *
-        static_cast<float>(dt_us) * 1.0e-6f;
-  }
-  energy_control_autonomous_last_gyro_sample_us_ = sample_us;
-  energy_control_autonomous_last_gyro_rate_dps_ = rate_dps;
-  if (!isfinite(energy_control_autonomous_gyro_relative_deg_)) {
+  // V46ae: read one fresh gyro/MEKF sample. The independent accumulated gyro
+  // angle no longer participates in Autonomous control.
+  const ImuReading& sample = imu_->reading();
+  const uint32_t sample_us = sample.last_gyro_update_us;
+  if (sample_us == 0 || sample_us == energy_control_autonomous_last_motion_sample_us_) return;
+  energy_control_autonomous_last_motion_sample_us_ = sample_us;
+  const float rate_dps =
+      (sample.gy_dps - status_.mekf_bias_y_dps) * Config::MEKF_GYRO_Y_SCALE;
+  const float peak_relative_angle_deg = status_.pitch_mekf_measurement_relative_deg;
+  const float detector_relative_angle_deg = status_.pitch_mekf_detector_relative_deg;
+  if (!isfinite(rate_dps) || !isfinite(peak_relative_angle_deg) ||
+      !isfinite(detector_relative_angle_deg)) {
     energy_control_autonomous_phase_ = EnergyControlAutonomousPhase::STOP;
-    stopMotor();
-    status_.last_error = "energy_nonfinite_gyro_coordinate";
+    requestEmergencyStop("energy_nonfinite_mekf_state");
     return;
   }
   const uint32_t t_test_ms = now_ms - run_start_ms_;
-  // V46aa control-zero detector begin
-  const float detector_relative_angle_deg = status_.pitch_mekf_detector_relative_deg;
-  // V46aa control-zero detector end
-  if (!isfinite(detector_relative_angle_deg)) return;
   if (!energy_control_autonomous_detector_has_previous_angle_) {
     energy_control_autonomous_detector_has_previous_angle_ = true;
     energy_control_autonomous_previous_detector_relative_angle_deg_ = detector_relative_angle_deg;
@@ -2618,7 +2569,7 @@ void ExperimentRunner::updateEnergyControlAutonomousMotion(uint32_t now_ms) {
     energy_control_autonomous_previous_detector_test_ms_ = t_test_ms;
     if (!status_.pulse_active &&
         energy_control_autonomous_half_cycle_state_ == EnergyControlAutonomousHalfCycleState::WAIT_PEAK) {
-      updateEnergyControlAutonomousPeakTracker(now_ms, detector_relative_angle_deg, rate_dps);
+      updateEnergyControlAutonomousPeakTracker(now_ms, peak_relative_angle_deg, rate_dps);
     }
     return;
   }
@@ -2627,11 +2578,11 @@ void ExperimentRunner::updateEnergyControlAutonomousMotion(uint32_t now_ms) {
       (before_deg > 0.0f && detector_relative_angle_deg <= 0.0f);
   const bool physical_event_suppressed = status_.pulse_active ||
       energy_control_autonomous_half_cycle_state_ == EnergyControlAutonomousHalfCycleState::PULSE_ACTIVE;
-  // Raw IMU, MEKF, comparison Madgwick, gyro integration, and detector history
-  // stay live during a pulse. Only promotion to a physical control event is suppressed.
+  // Estimators, comparison diagnostics and detector history stay live during a
+  // pulse. Only promotion to a physical control event is suppressed.
   if (!physical_event_suppressed &&
       energy_control_autonomous_half_cycle_state_ == EnergyControlAutonomousHalfCycleState::WAIT_PEAK) {
-    updateEnergyControlAutonomousPeakTracker(now_ms, detector_relative_angle_deg, rate_dps);
+    updateEnergyControlAutonomousPeakTracker(now_ms, peak_relative_angle_deg, rate_dps);
   }
   if (!physical_event_suppressed && crossing &&
       energy_control_autonomous_half_cycle_state_ == EnergyControlAutonomousHalfCycleState::WAIT_ZERO_CROSS &&
@@ -2653,7 +2604,7 @@ void ExperimentRunner::updateEnergyControlAutonomousMotion(uint32_t now_ms) {
   energy_control_autonomous_previous_detector_test_ms_ = t_test_ms;
 }
 void ExperimentRunner::updateEnergyControlAutonomousPeakTracker(uint32_t now_ms,
-                                                                  float detector_relative_angle_deg,
+                                                                  float peak_relative_angle_deg,
                                                                   float rate_dps) {
   if (!energy_control_autonomous_mode_ || !energy_control_autonomous_peak_tracker_enabled_ ||
       energy_control_autonomous_half_cycle_state_ != EnergyControlAutonomousHalfCycleState::WAIT_PEAK ||
@@ -2661,17 +2612,22 @@ void ExperimentRunner::updateEnergyControlAutonomousPeakTracker(uint32_t now_ms,
       energy_control_autonomous_phase_ == EnergyControlAutonomousPhase::IDLE ||
       energy_control_autonomous_phase_ == EnergyControlAutonomousPhase::STRONG_START_KICK ||
       energy_control_autonomous_phase_ == EnergyControlAutonomousPhase::STOP ||
-      !isfinite(detector_relative_angle_deg) || !isfinite(rate_dps)) return;
-  const int8_t detector_side = detector_relative_angle_deg > 0.0f ? 1 :
-      (detector_relative_angle_deg < 0.0f ? -1 : 0);
+      !isfinite(peak_relative_angle_deg) || !isfinite(rate_dps)) return;
+  const int8_t detector_side = peak_relative_angle_deg > 0.0f ? 1 :
+      (peak_relative_angle_deg < 0.0f ? -1 : 0);
   if (detector_side == 0) return;
-  const float detector_abs_deg = fabsf(detector_relative_angle_deg);
+  // V46af: a compensated zero-cross can precede the posterior zero-cross.
+  // With no output, tracking resumes immediately and may still see the old
+  // side. Wait for the commanded half-cycle before seeding its extremum.
+  if (energy_control_autonomous_pending_peak_ &&
+      detector_side != energy_control_autonomous_pending_next_side_) return;
+  const float detector_abs_deg = fabsf(peak_relative_angle_deg);
   const uint32_t t_test_ms = now_ms - run_start_ms_;
   if (!energy_control_autonomous_peak_tracker_started_) {
     energy_control_autonomous_peak_tracker_started_ = true;
     energy_control_autonomous_candidate_detector_side_ = detector_side;
     energy_control_autonomous_candidate_detector_peak_abs_deg_ = detector_abs_deg;
-    energy_control_autonomous_candidate_peak_amplitude_deg_ = fabsf(energy_control_autonomous_gyro_relative_deg_);
+    energy_control_autonomous_candidate_peak_amplitude_deg_ = detector_abs_deg;
     energy_control_autonomous_candidate_peak_ms_ = t_test_ms;
     energy_control_autonomous_return_samples_ = 0;
     return;
@@ -2679,7 +2635,7 @@ void ExperimentRunner::updateEnergyControlAutonomousPeakTracker(uint32_t now_ms,
   if (detector_side == energy_control_autonomous_candidate_detector_side_ &&
       detector_abs_deg >= energy_control_autonomous_candidate_detector_peak_abs_deg_) {
     energy_control_autonomous_candidate_detector_peak_abs_deg_ = detector_abs_deg;
-    energy_control_autonomous_candidate_peak_amplitude_deg_ = fabsf(energy_control_autonomous_gyro_relative_deg_);
+    energy_control_autonomous_candidate_peak_amplitude_deg_ = detector_abs_deg;
     energy_control_autonomous_candidate_peak_ms_ = t_test_ms;
     energy_control_autonomous_return_samples_ = 0;
     return;
@@ -2788,8 +2744,11 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   event.physical_next_peak_side = rate_dps >= 0.0f ? 1 : -1;
   event.side_mismatch_diagnostic =
       event.physical_next_peak_side != -energy_control_autonomous_last_peak_side_;
-  event.rate_support_diagnostic = event.zero_cross_abs_rate_dps >= Config::Q1_SHADOW_RATE_SUPPORT_MIN_DPS &&
-      event.zero_cross_abs_rate_dps <= Config::Q1_SHADOW_RATE_SUPPORT_MAX_DPS;
+  // Historical Q1 support is on the unscaled raw-Y axis; compare in the
+  // calibrated MEKF rate units now recorded by Autonomous events.
+  event.rate_support_diagnostic =
+      event.zero_cross_abs_rate_dps >= Config::Q1_SHADOW_RATE_SUPPORT_MIN_DPS * Config::MEKF_GYRO_Y_SCALE &&
+      event.zero_cross_abs_rate_dps <= Config::Q1_SHADOW_RATE_SUPPORT_MAX_DPS * Config::MEKF_GYRO_Y_SCALE;
   event.phase = static_cast<uint8_t>(energy_control_autonomous_phase_);
   event.previous_peak_time_ms = energy_control_autonomous_last_peak_ms_;
   event.previous_peak_side = energy_control_autonomous_last_peak_side_;
@@ -2802,8 +2761,15 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
       event.q_command_direction == event.physical_next_peak_side;
   event.vbat_mV = status_.roller_battery_mV;
   const uint32_t v46l_free_model_t0_us = micros();
-  event.free_next_peak_amplitude_deg = energyControlAutonomousFreeNextPeakAmplitude(
-      energy_control_autonomous_last_peak_amplitude_deg_);
+  // V46ai: only the current interpolated crossing rate and its physical side
+  // determine the free peak. There is no previous-amplitude P1 calculation.
+  const auto baseline = rate_baseline::evaluate(
+      event.zero_cross_abs_rate_dps, event.physical_next_peak_side);
+  event.p1_free_peak_before_rate_deg = NAN;  // retired CSV column, never computed
+  event.rate_baseline_peak_deg = baseline.rate_deg;  // raw formula, before zero floor
+  event.rate_baseline_correction_deg = NAN;  // retired P1-difference column
+  event.rate_baseline_reason = static_cast<uint8_t>(baseline.reason);
+  event.free_next_peak_amplitude_deg = baseline.adjusted_deg;
   const uint32_t v46l_free_model_us = static_cast<uint32_t>(micros() - v46l_free_model_t0_us);
   // V46s audit begin
   audit.free_model_us = v46l_free_model_us;
@@ -2822,6 +2788,30 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   const uint32_t now_ms = run_start_ms_ + t_test_ms;
   event.i0_estimated_mA = predicted_current_end_ms_ == 0 ? 0.0f :
       predicted_signed_current_end_mA_ * expf(-static_cast<float>(now_ms - predicted_current_end_ms_) / 70.0f);
+
+  // V46ak observation-only pre-input snapshot. Capture the latest independently
+  // sampled Roller state before the pulse solver/command path. Nothing below
+  // reads these fields back into control.
+  const uint32_t pre_input_capture_us = micros();
+  event.pre_input_capture_time_us = pre_input_capture_us;
+  if (roller_) {
+    const RollerTelemetry pre_input = roller_->telemetrySnapshot();
+    event.pre_input_current_sample_time_us = pre_input.current_sample_time_us;
+    event.pre_input_current_age_us = pre_input.current_sample_time_us == 0
+        ? UINT32_MAX
+        : static_cast<uint32_t>(pre_input_capture_us - pre_input.current_sample_time_us);
+    event.pre_input_current_valid = pre_input.current_valid && pre_input.current_sample_time_us != 0;
+    event.pre_input_measured_current_mA = event.pre_input_current_valid
+        ? static_cast<float>(pre_input.actual_current_mA) : NAN;
+    event.pre_input_wheel_speed_sample_time_us = pre_input.speed_sample_time_us;
+    event.pre_input_wheel_speed_age_us = pre_input.speed_sample_time_us == 0
+        ? UINT32_MAX
+        : static_cast<uint32_t>(pre_input_capture_us - pre_input.speed_sample_time_us);
+    event.pre_input_wheel_speed_valid = pre_input.speed_valid && pre_input.speed_sample_time_us != 0;
+    event.pre_input_wheel_speed_rpm = event.pre_input_wheel_speed_valid
+        ? pre_input.speed_rpm : NAN;
+  }
+
   event.q_available_mA_s = fabsf(predictedChargeMaS(event.i0_estimated_mA,
       event.q_command_direction, static_cast<float>(Config::ENERGY_CONTROL_AUTONOMOUS_MAX_PULSE_MS),
       Config::ENERGY_CONTROL_AUTONOMOUS_CURRENT_MA));

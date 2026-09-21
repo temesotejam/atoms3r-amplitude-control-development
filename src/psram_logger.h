@@ -337,6 +337,10 @@ class PsramLogger {
     bool side_mismatch_diagnostic = false;
     uint8_t phase = 0;
     float free_next_peak_amplitude_deg = NAN;
+    float p1_free_peak_before_rate_deg = NAN;
+    float rate_baseline_peak_deg = NAN;
+    float rate_baseline_correction_deg = NAN;  // retired P1-difference column
+    uint8_t rate_baseline_reason = 255;
     float passive_energy_j = NAN;
     float target_peak_deg = NAN;
     float target_energy_j = NAN;
@@ -362,6 +366,19 @@ class PsramLogger {
     bool command_matches_zero_cross_motion = false;
     uint16_t vbat_mV = 0;
     float i0_estimated_mA = NAN;
+
+    // V46ak observation-only snapshot taken before the pulse command is queued.
+    // These fields are never consulted by the controller or pulse solver.
+    uint32_t pre_input_capture_time_us = 0;
+    float pre_input_measured_current_mA = NAN;
+    uint32_t pre_input_current_sample_time_us = 0;
+    uint32_t pre_input_current_age_us = UINT32_MAX;
+    bool pre_input_current_valid = false;
+    float pre_input_wheel_speed_rpm = NAN;
+    uint32_t pre_input_wheel_speed_sample_time_us = 0;
+    uint32_t pre_input_wheel_speed_age_us = UINT32_MAX;
+    bool pre_input_wheel_speed_valid = false;
+
     float solver_required_width_ms = NAN;
     uint16_t solver_selected_integer_width_ms = 0;
     int16_t command_current_mA = 0;
@@ -468,8 +485,7 @@ class PsramLogger {
                 uint8_t q_probe_schedule_id = 0, bool passive_capture = false,
                  float q1_shadow_target_peak_abs_deg = NAN, bool q_ident_mode = false,
                  uint8_t q_ident_run_schedule_id = 0, bool energy_control_v0_mode = false,
-                 bool energy_control_autonomous_mode = false,
-                 uint32_t autonomous_timing_compensation_us = 0);
+                 bool energy_control_autonomous_mode = false);
   uint16_t beginIdentificationEvent(const IdentificationEvent& event);
   void finishIdentificationEvent(uint16_t event_id, uint32_t peak_ms, int16_t theta_peak_cdeg);
   void addCalibrationPeakEvent(const CalibrationPeakEvent& event);

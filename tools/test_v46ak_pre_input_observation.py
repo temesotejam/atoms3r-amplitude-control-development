@@ -17,10 +17,9 @@ assert 'ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920"
 assert "ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US = 3000UL" in config
 assert 'AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920"' in config
 
-# V46ak is a distinct flashable observation build.
-assert manifest["version"] == "0.46.36"
-assert "V46ak" in manifest["name"]
-assert "V46ak / 0.46.36" in site
+# The V46ak observation layer must remain present in later flashable builds.
+assert manifest["version"] in ("0.46.36", "0.46.37")
+assert "V46ak / 0.46.36" in site or "V46al / 0.46.37" in site
 
 # Official Roller485 Speed Readback register and scale.
 assert "REG_SPEED_READBACK = 0x60" in roller_cpp

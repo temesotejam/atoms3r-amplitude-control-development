@@ -110,7 +110,7 @@ async function refresh(){
 }
 setInterval(refresh,1000);refresh();
 </script></body></html>
-)HTML"
+)HTML";
 
 void WebUi::begin(WebServer& server, ExperimentRunner& runner, ImuManager& imu, Roller485Manager& roller, PsramLogger& logger) {
   server_ = &server;

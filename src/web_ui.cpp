@@ -11,7 +11,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AtomS3R Amplitude Control</title><style>
 body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}header{padding:16px;background:#263341;color:#fff}header h1{font-size:1.25rem;margin:0 0 5px}header div{font-size:.84rem;opacity:.85}main{padding:14px;max-width:620px;margin:auto}.card{border:1px solid #c5ced8;background:#fff;padding:14px;border-radius:8px;margin:12px 0}.card h2{font-size:1rem;margin:0 0 10px}.status{font-size:.95rem;line-height:1.55}.error{color:#a11d27;font-weight:600}.note{font-size:.88rem;line-height:1.5;color:#536273;margin:8px 0}button,select,a.action{box-sizing:border-box;width:100%;margin-top:10px;border:1px solid #b8c2ce;padding:11px;border-radius:6px;font-size:16px}button,a.action{background:#1769e0;color:#fff;text-align:center;text-decoration:none}select{background:#fff;color:#17202a}button.danger{background:#c4262e;border-color:#c4262e}button.secondary{background:#566575;border-color:#566575}button:disabled,select:disabled,a.action.disabled{opacity:.42;pointer-events:none}[hidden]{display:none!important}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}details{margin-top:10px;font-size:.9rem}code{font-size:.9em}@media(max-width:520px){.row{grid-template-columns:1fr}}</style></head><body>
-<header><h1>AtomS3R Amplitude Control</h1><div>V46aq / 0.46.42 — V46al download path + compact RWLOG</div></header>
+<header><h1>AtomS3R Amplitude Control</h1><div>V46ar / 0.46.43 — prepared RWLOG + V46al stream</div></header>
 <main>
   <section class="card">
     <h2>状態</h2>
@@ -32,14 +32,15 @@ body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}
 
   <section class="card">
     <h2>測定ログ</h2>
-    <p class="note">測定終了後、次のRunを始める前にRWLOGを保存してください。ダウンロード方式はV46alで使用していた単純な直接ダウンロードへ戻しています。</p>
+    <p class="note">測定終了後にmetadataとCRCを事前計算します。RWLOG readyになってからDownloadを押してください。送信自体はV46alの4096 byte直接方式です。</p>
+    <div id="rwlogInfo" class="note">RWLOG: waiting</div>
     <a id="rwlog" class="action" href="/download/rwlog" onclick="beginDownload()">Download RWLOG</a>
     <button id="clear" class="secondary" onclick="postClear()">Clear log memory</button>
   </section>
 </main>
 <script>
 let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0,statusController=null;
-const energy=document.getElementById('energy'),energyTarget=document.getElementById('energyTarget'),stop=document.getElementById('stop'),clear=document.getElementById('clear'),rwlog=document.getElementById('rwlog');
+const energy=document.getElementById('energy'),energyTarget=document.getElementById('energyTarget'),stop=document.getElementById('stop'),clear=document.getElementById('clear'),rwlog=document.getElementById('rwlog'),rwlogInfo=document.getElementById('rwlogInfo');
 
 function lock(e,v){if(e.tagName==='A')e.classList.toggle('disabled',v);else e.disabled=v;}
 async function post(path){const r=await fetch(path,{method:'POST'});if(!r.ok)alert(await r.text());await refresh();return r.ok;}
@@ -73,6 +74,8 @@ function apply(j){
   document.getElementById('summary').textContent=`${j.state||'UNKNOWN'} | target=${Number(j.energy_control_autonomous_target_peak_deg||0).toFixed(1)}° | motor=${j.motor_cmd_mA||0} mA | actual=${j.roller_actual_current_mA||0} mA | remaining=${j.remaining_s||0} s`;
   document.getElementById('startupInfo').textContent=`${b.guide_reason||'--'} | 立位ずれ=${b.direction_error_deg??'--'}° | gyro=${b.gyro_norm_dps??'--'}°/s | IMU=${b.imu_error||'OK'}`;
   document.getElementById('errorInfo').textContent=j.last_error||'';
+  const totalKiB=Number(j.rwlog_total_bytes||0)/1024,metaKiB=Number(j.rwlog_metadata_bytes||0)/1024;
+  rwlogInfo.textContent=`RWLOG: ${j.rwlog_prepare_state||'not_prepared'} | total=${totalKiB.toFixed(1)} KiB | metadata=${metaKiB.toFixed(1)} KiB | prepare=${(Number(j.rwlog_prepare_total_us||0)/1000).toFixed(1)} ms (meta ${(Number(j.rwlog_prepare_metadata_us||0)/1000).toFixed(1)} + CRC ${(Number(j.rwlog_prepare_crc_us||0)/1000).toFixed(1)})`;
   if(document.activeElement!==energyTarget&&Number.isFinite(Number(j.energy_control_autonomous_target_peak_deg)))energyTarget.value=String(Number(j.energy_control_autonomous_target_peak_deg));
 }
 function applyFrozenState(){
@@ -131,6 +134,10 @@ void WebUi::begin(WebServer& server, ExperimentRunner& runner, ImuManager& imu, 
 }
 
 void WebUi::update() {
+  if (logger_ && runner_ && !run_control.active() && !runner_->running() &&
+      logger_->lastMeasurementDone() && !logger_->rwlogPrepareAttempted()) {
+    logger_->prepareRwLog();
+  }
   if (server_) server_->handleClient();
 }
 
@@ -476,6 +483,14 @@ String WebUi::statusJson() const {
   json += ",\"log_capacity\":" + String(logger_->sampleCapacity());
   json += ",\"pulse_audit_count\":" + String(logger_->pulseAuditCount());
   json += ",\"pulse_audit_capacity\":" + String(logger_->pulseAuditCapacity());
+  json += ",\"rwlog_prepare_attempted\":" + String(logger_->rwlogPrepareAttempted() ? "true" : "false");
+  json += ",\"rwlog_prepared\":" + String(logger_->rwlogPrepared() ? "true" : "false");
+  json += ",\"rwlog_prepare_state\":\"" + String(logger_->rwlogPrepareState()) + "\"";
+  json += ",\"rwlog_metadata_bytes\":" + String(logger_->preparedMetadataBytes());
+  json += ",\"rwlog_total_bytes\":" + String(logger_->preparedTotalBytes());
+  json += ",\"rwlog_prepare_metadata_us\":" + String(logger_->prepareMetadataUs());
+  json += ",\"rwlog_prepare_crc_us\":" + String(logger_->prepareCrcUs());
+  json += ",\"rwlog_prepare_total_us\":" + String(logger_->prepareTotalUs());
   json += ",\"rwlog_downloadable\":\"" + String(logger_->rwlogDownloadable() ? "yes" : "no") + "\"";
   json += ",\"download_filename\":\"" + String(filename) + "\"";
   json += ",\"run_id\":" + String(logger_->currentRunId());

@@ -182,6 +182,16 @@ void PsramLogger::clear() {
   timing_probe_event_count_ = 0;
   timing_probe_event_overflow_ = false;
   calibration_result_ = CalibrationResult{};
+  prepared_metadata_ = "";
+  prepared_header_ = RwLogFileHeader{};
+  prepared_crc_ = 0;
+  prepared_total_size_ = 0;
+  prepare_metadata_us_ = 0;
+  prepare_crc_us_ = 0;
+  prepare_total_us_ = 0;
+  rwlog_prepare_attempted_ = false;
+  rwlog_prepared_ = false;
+  rwlog_prepare_state_ = "not_prepared";
   last_measurement_done_ = false;
 }
 
@@ -234,6 +244,16 @@ void PsramLogger::startRun(uint16_t run_id, uint64_t run_start_us, int16_t curre
   timing_probe_event_count_ = 0;
   timing_probe_event_overflow_ = false;
   calibration_result_ = CalibrationResult{};
+  prepared_metadata_ = "";
+  prepared_header_ = RwLogFileHeader{};
+  prepared_crc_ = 0;
+  prepared_total_size_ = 0;
+  prepare_metadata_us_ = 0;
+  prepare_crc_us_ = 0;
+  prepare_total_us_ = 0;
+  rwlog_prepare_attempted_ = false;
+  rwlog_prepared_ = false;
+  rwlog_prepare_state_ = "not_prepared";
   last_measurement_done_ = false;
 }
 
@@ -361,6 +381,61 @@ void PsramLogger::markMeasurementDone() {
   last_measurement_done_ = true;
 }
 
+bool PsramLogger::prepareRwLog() {
+  rwlog_prepare_attempted_ = true;
+  rwlog_prepared_ = false;
+  rwlog_prepare_state_ = "metadata";
+  prepared_total_size_ = 0;
+  prepare_metadata_us_ = 0;
+  prepare_crc_us_ = 0;
+  prepare_total_us_ = 0;
+
+  if (!ready_ || run_start_us_ == 0 || sample_count_ == 0 || downloading_) {
+    rwlog_prepare_state_ = "not_ready";
+    last_error_ = "rwlog_prepare_not_ready";
+    return false;
+  }
+
+  const uint32_t total_start_us = micros();
+  const uint32_t metadata_start_us = micros();
+  prepared_metadata_ = buildMetadataJson();
+  prepare_metadata_us_ = static_cast<uint32_t>(micros() - metadata_start_us);
+
+  if (prepared_metadata_.length() == 0 ||
+      prepared_metadata_.indexOf("\"metadata_error\"") >= 0) {
+    rwlog_prepare_state_ = "metadata_failed";
+    last_error_ = "rwlog_metadata_prepare_failed";
+    prepare_total_us_ = static_cast<uint32_t>(micros() - total_start_us);
+    Serial.printf("RWLOG prepare FAIL metadata bytes=%u time_us=%lu free_psram=%u\n",
+                  static_cast<unsigned>(prepared_metadata_.length()),
+                  static_cast<unsigned long>(prepare_metadata_us_),
+                  static_cast<unsigned>(psramFree()));
+    return false;
+  }
+
+  prepared_header_ = buildHeader(prepared_metadata_.length());
+  rwlog_prepare_state_ = "crc";
+  const uint32_t crc_start_us = micros();
+  prepared_crc_ = calculateCrc(prepared_header_, prepared_metadata_);
+  prepare_crc_us_ = static_cast<uint32_t>(micros() - crc_start_us);
+  prepared_total_size_ = static_cast<size_t>(prepared_header_.crc_offset) + sizeof(prepared_crc_);
+  prepare_total_us_ = static_cast<uint32_t>(micros() - total_start_us);
+
+  rwlog_prepared_ = true;
+  rwlog_prepare_state_ = "ready";
+  last_error_ = "";
+  Serial.printf("RWLOG prepared metadata=%u samples=%u pulse_audit=%u total=%u meta_us=%lu crc_us=%lu total_us=%lu free_psram=%u\n",
+                static_cast<unsigned>(prepared_metadata_.length()),
+                static_cast<unsigned>(sample_count_),
+                static_cast<unsigned>(pulse_audit_count_),
+                static_cast<unsigned>(prepared_total_size_),
+                static_cast<unsigned long>(prepare_metadata_us_),
+                static_cast<unsigned long>(prepare_crc_us_),
+                static_cast<unsigned long>(prepare_total_us_),
+                static_cast<unsigned>(psramFree()));
+  return true;
+}
+
 bool PsramLogger::addSample(const LogSample& row) {
   if (!ready_ || downloading_ || sample_count_ >= sample_capacity_) return false;
   samples_[sample_count_++] = row;
@@ -384,7 +459,7 @@ bool PsramLogger::warningLevel() const {
 }
 
 bool PsramLogger::rwlogDownloadable() const {
-  return ready_ && run_start_us_ != 0 && sample_count_ > 0;
+  return ready_ && run_start_us_ != 0 && sample_count_ > 0 && rwlog_prepared_;
 }
 
 void PsramLogger::downloadFilename(char* out, size_t out_len) const {
@@ -1920,26 +1995,25 @@ bool PsramLogger::streamRwLog(WebServer& server) {
   }
 
   downloading_ = true;
-  const String metadata = buildMetadataJson();
-  const RwLogFileHeader header = buildHeader(metadata.length());
-  const uint32_t crc = calculateCrc(header, metadata);
+  rwlog_prepare_state_ = "sending";
   char filename[72];
   downloadFilename(filename, sizeof(filename));
 
   server.sendHeader("Content-Disposition", String("attachment; filename=\"") + filename + "\"");
   server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-  server.setContentLength(header.crc_offset + sizeof(crc));
+  server.setContentLength(prepared_total_size_);
   server.send(200, "application/octet-stream", "");
 
   bool ok = true;
-  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&header), sizeof(header));
-  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(metadata.c_str()), metadata.length());
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&prepared_header_), sizeof(prepared_header_));
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(prepared_metadata_.c_str()), prepared_metadata_.length());
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(samples_), sample_count_ * sizeof(LogSample));
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
                         pulse_audit_count_ * sizeof(PulseAuditSample));
-  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&crc), sizeof(crc));
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&prepared_crc_), sizeof(prepared_crc_));
 
   downloading_ = false;
+  rwlog_prepare_state_ = ok ? "ready" : "send_failed";
   last_error_ = ok ? "" : "rwlog_stream_failed";
   return ok;
 }

@@ -4,24 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>AtomS3R Amplitude Control Development — V46aq V46al download + compact RWLOG</title>
+  <title>AtomS3R Amplitude Control Development — V46ar V46al download + compact RWLOG</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46aq RANGE RESUME</p>
-      <h1>Amplitude Control Development<br><span>V46al Download + Compact RWLOG</span></h1>
-      <p class="lead">V46alの実制御とV46apのcompact RWLOGを維持し、ダウンロード経路だけを実績のあるV46al方式へ戻したV46aq / 0.46.42です。4096 byte直送・Rangeなし・native download holdなしの単純な方式です。</p>
+      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46ar RANGE RESUME</p>
+      <h1>Amplitude Control Development<br><span>Prepared RWLOG + V46al Stream</span></h1>
+      <p class="lead">V46aqのV46al 4096 byte直接送信とV46apのcompact RWLOGを維持し、metadata生成とCRC計算を測定終了直後に事前実行するV46ar / 0.46.43です。Downloadを押した後は準備済みデータを送るだけです。</p>
       <div class="badges"><span>ESP32-S3</span><span>BMI270 400/200 Hz</span><span>RWLOG v51</span><span>MEKF amplitude</span><span>3 ms compensation</span></div>
     </header>
     <section class="panel important">
-      <h2>Compact RWLOG版：V46aq / 0.46.42</h2>
+      <h2>Compact RWLOG版：V46ar / 0.46.43</h2>
       <p>姿勢推定・ZEROクロス3 ms補償・ピーク検出・Qゲイン・Ki・電流モデル・fast solver・300 mA/最大100 ms・ESTOPは維持しています。変更点は、8°制御の10秒以降で、直前ピークが5 Runの測定範囲内にある場合だけ次ピーク予測へ最大±0.70°の補正を加えることです。</p>
       <p><strong>測定条件：遅延補償3 ms固定・目標8°・30秒。</strong>開始姿勢と撮影条件をそろえてください。補償時間の設定は不要です。各Run終了後、<strong>次の開始前にRWLOGと動画を保存</strong>してください。</p>
-      <p>300 mA・最大100 ms、起動パルス、非常停止、IMU取得、LED同期は維持しています。V46apの軽量化は維持し、通常ログ50 Hz・2 ms Pulse Audit・compact metadataのままです。転送部分だけV46al方式へ戻しています。</p>
-      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AQ_V46AL_DOWNLOAD_RESTORE.md">V46aqのV46alダウンロード復元</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AP_COMPACT_RWLOG.md">V46apのRWLOG軽量化</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AO_HTTP_RANGE_RESUME.md">V46aoのRange再開対応</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AN_NATIVE_RWLOG_DOWNLOAD.md">V46anのnative download</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md">V46alの実制御変更</a></p>
+      <p>300 mA・最大100 ms、起動パルス、非常停止、IMU取得、LED同期は維持しています。V46apの軽量化とV46aqのV46al送信方式は維持しています。さらにRWLOG準備状態、metadataサイズ、総サイズ、metadata生成時間、CRC計算時間を確認できます。</p>
+      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AR_PREPARED_RWLOG.md">V46arの事前RWLOG準備</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AQ_V46AL_DOWNLOAD_RESTORE.md">V46aqのV46alダウンロード復元</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AP_COMPACT_RWLOG.md">V46apのRWLOG軽量化</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AO_HTTP_RANGE_RESUME.md">V46aoのRange再開対応</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AN_NATIVE_RWLOG_DOWNLOAD.md">V46anのnative download</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md">V46alの実制御変更</a></p>
       <p>公開ビルド：<code id="build-sha">取得中</code><br><a href="build-sha.txt">ビルドSHAを確認</a> / <a href="firmware/SHA256SUMS.txt">ファームウェアのSHA-256</a></p>
     </section>
 
@@ -29,7 +29,7 @@
       <h2>このページから直接書き込めます</h2>
       <p>AtomS3R を USB でPCへ接続し、Chrome または Edge のデスクトップ版で下のボタンを押してください。</p>
       <esp-web-install-button manifest="manifest.json">
-        <button slot="activate" class="primary">AtomS3RへV46aqを書き込む</button>
+        <button slot="activate" class="primary">AtomS3RへV46arを書き込む</button>
         <span slot="unsupported" class="warning">このブラウザはWeb Serial / WebUSBに対応していません。PC版ChromeまたはEdgeを使用してください。</span>
       </esp-web-install-button>
       <details>
@@ -81,7 +81,7 @@
       <p>Attitude revision: <code>v46aj_fixed_3ms_compensation_20260920</code></p>
     </section>
 
-    <footer>atoms3r-amplitude-control-development / V46aq V46al download restore</footer>
+    <footer>atoms3r-amplitude-control-development / V46ar prepared RWLOG</footer>
   </main>
   <script>
     fetch('build-sha.txt', {cache: 'no-store'})

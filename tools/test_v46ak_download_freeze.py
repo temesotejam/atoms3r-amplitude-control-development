@@ -8,7 +8,7 @@ logger = (ROOT / "src/psram_logger.cpp").read_text(encoding="utf-8").replace("\r
 
 def git_blob_sha(path: Path) -> str:
     data = path.read_bytes()
-    header = f"blob {len(data)}\\0".encode()
+    header = f"blob {len(data)}\0".encode()
     return hashlib.sha1(header + data).hexdigest()
 
 # Full logger/converter files are frozen to the verified stable blobs.

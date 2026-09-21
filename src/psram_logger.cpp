@@ -10,11 +10,11 @@ extern Roller485Manager roller;
 #include <new>
 
 #include "config.h"
+#include "rwlog_write_all.h"
 
 static constexpr uint16_t RWLOG_FORMAT_VERSION_LEGACY = 51;
 static constexpr uint16_t RWLOG_FORMAT_VERSION_AUTONOMOUS_COMPACT = 52;
 static constexpr uint32_t RWLOG_FLAG_CRC32 = 1U << 0;
-static constexpr size_t STREAM_CHUNK_BYTES = 4096;
 
 namespace {
 String jsonFloatOrNull(float value, unsigned int decimals) {
@@ -1982,14 +1982,10 @@ uint32_t PsramLogger::calculateCrc(const RwLogFileHeader& header, const String& 
 
 bool PsramLogger::writeBytes(WebServer& server, const uint8_t* data, size_t len) {
   WiFiClient client = server.client();
-  while (len > 0) {
-    const size_t n = len > STREAM_CHUNK_BYTES ? STREAM_CHUNK_BYTES : len;
-    if (client.write(data, n) != n) return false;
-    data += n;
-    len -= n;
-    delay(0);
-  }
-  return true;
+  return rwlog_write_all::writeAll(
+      client, data, len,
+      []() -> uint32_t { return millis(); },
+      [](uint32_t ms) { delay(ms); });
 }
 
 bool PsramLogger::streamRwLog(WebServer& server) {

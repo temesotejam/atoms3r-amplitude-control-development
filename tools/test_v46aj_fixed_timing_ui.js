@@ -16,7 +16,7 @@ const get=id=>{assert(elements.has(id),'Missing DOM element: '+id);return elemen
 const isDisabled=e=>e.tagName==='A'?e.classList.contains('disabled'):e.disabled;
 for(const id of ['summary','startupInfo','errorInfo','energyTarget','energy','stop','rwlog','clear'])get(id);
 for(const removed of ['passive','shadowTarget','zero','target','abs','current','rate','targetError'])assert(!elements.has(removed),removed);
-assert(html.includes('V46ao / 0.46.40')||html.includes('V46ap / 0.46.41')||html.includes('V46aq / 0.46.42')||html.includes('V46ar / 0.46.43')||html.includes('V46as / 0.46.44'));
+assert(html.includes('V46ao / 0.46.40')||html.includes('V46ap / 0.46.41')||html.includes('V46aq / 0.46.42')||html.includes('V46ar / 0.46.43')||html.includes('V46as / 0.46.44')||html.includes('V46at / 0.46.45'));
 assert(html.includes('ZEROクロス補償3 ms固定'));
 assert(!html.includes('Q1 direct next-peak shadow'));
 assert(!html.includes('Passive release capture'));

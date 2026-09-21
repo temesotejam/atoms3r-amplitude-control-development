@@ -1,6 +1,6 @@
 {
-  "name": "AtomS3R V46as Autonomous Compact v52",
-  "version": "0.46.44",
+  "name": "AtomS3R V46at Partial-Write-Safe Download",
+  "version": "0.46.45",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

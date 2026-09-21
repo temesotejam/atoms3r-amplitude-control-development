@@ -4,24 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#111827">
-  <title>AtomS3R Amplitude Control Development — V46as Autonomous compact v52</title>
+  <title>AtomS3R Amplitude Control Development — V46at Autonomous compact v52 + partial-write-safe download</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="https://unpkg.com/esp-web-tools@10.1.1/dist/web/install-button.js?module"></script>
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46as RANGE RESUME</p>
+      <p class="eyebrow">ATOMS3R / AMPLITUDE CONTROL DEVELOPMENT / V46at RANGE RESUME</p>
       <h1>Amplitude Control Development<br><span>40-byte Autonomous v52 + V46al Stream</span></h1>
-      <p class="lead">現在の8°・30秒Autonomous測定専用に、258 byteの汎用時系列を40 byteのv52時系列へ置き換えたV46as / 0.46.44です。50 Hz×30秒の時系列本体は約60 kBです。2 ms Pulse Auditと現在必要なZEROクロス/ピーク/Q/pre-input情報は維持します。</p>
+      <p class="lead">V46asの40 byte/50 Hz RWLOG v52を維持し、ダウンロード途中のTCP partial writeで送信が途切れないようにしたV46at / 0.46.45です。単一HTTP 200のまま、1460 byte単位で未送信分を最後まで送り切ります。</p>
       <div class="badges"><span>ESP32-S3</span><span>BMI270 400/200 Hz</span><span>RWLOG v51</span><span>MEKF amplitude</span><span>3 ms compensation</span></div>
     </header>
     <section class="panel important">
-      <h2>Autonomous専用 compact v52：V46as / 0.46.44</h2>
+      <h2>Autonomous compact v52 + partial-write-safe：V46at / 0.46.45</h2>
       <p>姿勢推定・ZEROクロス3 ms補償・ピーク検出・Qゲイン・Ki・電流モデル・fast solver・300 mA/最大100 ms・ESTOPは維持しています。変更点は、8°制御の10秒以降で、直前ピークが5 Runの測定範囲内にある場合だけ次ピーク予測へ最大±0.70°の補正を加えることです。</p>
       <p><strong>測定条件：遅延補償3 ms固定・目標8°・30秒。</strong>開始姿勢と撮影条件をそろえてください。補償時間の設定は不要です。各Run終了後、<strong>次の開始前にRWLOGと動画を保存</strong>してください。</p>
-      <p>制御、300 mA・最大100 ms、非常停止、MEKF、3 ms補償、LED同期は変更していません。現在のAutonomous Runでは旧258 byte汎用行を保存せず、40 byte専用行を50 Hzで保存します。Pulse Auditは26 byte/2 msのままです。</p>
-      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AS_AUTONOMOUS_COMPACT_V52.md">V46asのAutonomous compact v52</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AR_PREPARED_RWLOG.md">V46arの事前RWLOG準備</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AQ_V46AL_DOWNLOAD_RESTORE.md">V46aqのV46alダウンロード復元</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AP_COMPACT_RWLOG.md">V46apのRWLOG軽量化</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AO_HTTP_RANGE_RESUME.md">V46aoのRange再開対応</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AN_NATIVE_RWLOG_DOWNLOAD.md">V46anのnative download</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md">V46alの実制御変更</a></p>
+      <p>制御、300 mA・最大100 ms、非常停止、MEKF、3 ms補償、40 byte v52、26 byte/2 ms Pulse Auditは変更していません。変更点はWi-Fi送信時のpartial writeを継続送信する処理だけです。</p>
+      <p><a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AT_PARTIAL_WRITE_SAFE.md">V46atのpartial-write-safe送信</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AS_AUTONOMOUS_COMPACT_V52.md">V46asのAutonomous compact v52</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AR_PREPARED_RWLOG.md">V46arの事前RWLOG準備</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AQ_V46AL_DOWNLOAD_RESTORE.md">V46aqのV46alダウンロード復元</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AP_COMPACT_RWLOG.md">V46apのRWLOG軽量化</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AO_HTTP_RANGE_RESUME.md">V46aoのRange再開対応</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AN_NATIVE_RWLOG_DOWNLOAD.md">V46anのnative download</a> / <a href="https://github.com/temesotejam/atoms3r-amplitude-control-development/blob/main/docs/V46AL_PREVIOUS_PEAK_ACTIVE_CONTROL.md">V46alの実制御変更</a></p>
       <p>公開ビルド：<code id="build-sha">取得中</code><br><a href="build-sha.txt">ビルドSHAを確認</a> / <a href="firmware/SHA256SUMS.txt">ファームウェアのSHA-256</a></p>
     </section>
 
@@ -29,7 +29,7 @@
       <h2>このページから直接書き込めます</h2>
       <p>AtomS3R を USB でPCへ接続し、Chrome または Edge のデスクトップ版で下のボタンを押してください。</p>
       <esp-web-install-button manifest="manifest.json">
-        <button slot="activate" class="primary">AtomS3RへV46asを書き込む</button>
+        <button slot="activate" class="primary">AtomS3RへV46atを書き込む</button>
         <span slot="unsupported" class="warning">このブラウザはWeb Serial / WebUSBに対応していません。PC版ChromeまたはEdgeを使用してください。</span>
       </esp-web-install-button>
       <details>
@@ -81,7 +81,7 @@
       <p>Attitude revision: <code>v46aj_fixed_3ms_compensation_20260920</code></p>
     </section>
 
-    <footer>atoms3r-amplitude-control-development / V46as autonomous compact v52</footer>
+    <footer>atoms3r-amplitude-control-development / V46at partial-write-safe download</footer>
   </main>
   <script>
     fetch('build-sha.txt', {cache: 'no-store'})

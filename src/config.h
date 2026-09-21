@@ -126,6 +126,7 @@ static constexpr char AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_inpu
 // V46al previous-peak active control begin
 static constexpr char AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921";
 static constexpr char RWLOG_DOWNLOAD_REVISION[] = "v46ao_http_range_resume_20260921";
+static constexpr char RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921";
 static constexpr char ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION[] =
     "V46AK_5RUN_8DEG_10TO30S_PREV_RESIDUAL_20260921";
 static constexpr bool ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_CONTROL_ENABLED = true;
@@ -818,7 +819,11 @@ static constexpr uint32_t BETA_SWEEP_TOTAL_DURATION_MS =
     BETA_SWEEP_TRIAL_COUNT * BETA_SWEEP_TRIAL_DURATION_MS +
     (BETA_SWEEP_TRIAL_COUNT - 1) * BETA_SWEEP_INTER_TRIAL_REST_MS;
 
-static constexpr size_t LOG_BUFFER_BYTES = 6UL * 1024UL * 1024UL;
+// V46ap: the 258-byte full time-series row is now kept at the normal 50 Hz only.
+// 1 MiB holds >80 s at 50 Hz, comfortably above the fixed 30 s Autonomous run.
+// High-rate pulse current/wheel observations have their own compact PSRAM buffer.
+static constexpr size_t LOG_BUFFER_BYTES = 1UL * 1024UL * 1024UL;
+static constexpr size_t PULSE_AUDIT_BUFFER_BYTES = 512UL * 1024UL;
 static constexpr uint8_t BUFFER_WARNING_PERCENT = 90;
 
 }  // namespace Config

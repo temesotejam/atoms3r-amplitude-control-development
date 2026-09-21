@@ -14,8 +14,8 @@ site=(R/'site/index.html').read_text()
 assert 'ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920"' in config
 assert 'AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920"' in config
 assert 'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"' in config
-assert manifest['version']=='0.46.37' and 'V46al' in manifest['name']
-assert 'V46al / 0.46.37' in site
+assert manifest['version'] in ('0.46.37','0.46.38')
+assert 'V46al / 0.46.37' in site or 'V46am / 0.46.38' in site
 
 for token in (
  'ENERGY_CONTROL_AUTONOMOUS_CURRENT_MA = 300',

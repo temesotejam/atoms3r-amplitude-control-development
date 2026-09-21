@@ -11,7 +11,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AtomS3R Amplitude Control</title><style>
 body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}header{padding:16px;background:#263341;color:#fff}header h1{font-size:1.25rem;margin:0 0 5px}header div{font-size:.84rem;opacity:.85}main{padding:14px;max-width:620px;margin:auto}.card{border:1px solid #c5ced8;background:#fff;padding:14px;border-radius:8px;margin:12px 0}.card h2{font-size:1rem;margin:0 0 10px}.status{font-size:.95rem;line-height:1.55}.error{color:#a11d27;font-weight:600}.note{font-size:.88rem;line-height:1.5;color:#536273;margin:8px 0}button,select,a.action{box-sizing:border-box;width:100%;margin-top:10px;border:1px solid #b8c2ce;padding:11px;border-radius:6px;font-size:16px}button,a.action{background:#1769e0;color:#fff;text-align:center;text-decoration:none}select{background:#fff;color:#17202a}button.danger{background:#c4262e;border-color:#c4262e}button.secondary{background:#566575;border-color:#566575}button:disabled,select:disabled,a.action.disabled{opacity:.42;pointer-events:none}[hidden]{display:none!important}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}details{margin-top:10px;font-size:.9rem}code{font-size:.9em}@media(max-width:520px){.row{grid-template-columns:1fr}}</style></head><body>
-<header><h1>AtomS3R Amplitude Control</h1><div>V46as / 0.46.44 — 40-byte v52 + V46al stream</div></header>
+<header><h1>AtomS3R Amplitude Control</h1><div>V46at / 0.46.45 — 40-byte v52 + partial-write-safe stream</div></header>
 <main>
   <section class="card">
     <h2>状態</h2>
@@ -32,7 +32,7 @@ body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}
 
   <section class="card">
     <h2>測定ログ</h2>
-    <p class="note">現在のAutonomous測定は40 byte/50 Hzの専用v52ログです。測定終了後にmetadataとCRCを事前計算し、ready後はV46alの4096 byte直接方式で送信します。</p>
+    <p class="note">現在のAutonomous測定は40 byte/50 Hzの専用v52ログです。ready後は単一HTTP 200で送信し、TCPの部分書き込みが起きても残りを継続送信します。Range再開は使いません。</p>
     <div id="rwlogInfo" class="note">RWLOG: waiting</div>
     <a id="rwlog" class="action" href="/download/rwlog" onclick="beginDownload()">Download RWLOG</a>
     <button id="clear" class="secondary" onclick="postClear()">Clear log memory</button>

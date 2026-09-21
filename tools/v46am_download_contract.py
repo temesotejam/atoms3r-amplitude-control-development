@@ -1,8 +1,11 @@
-"""Reverse V46am download-only config identity before retained baseline hashes."""
+"""Reverse download-only config identity before retained baseline hashes."""
+import re
+
 def normalize_config(text: str) -> str:
-    return text.replace(
-        '\nstatic constexpr char RWLOG_DOWNLOAD_REVISION[] = "v46am_fetch_backpressure_20260921";',
+    return re.sub(
+        r'\nstatic constexpr char RWLOG_DOWNLOAD_REVISION\[\] = "[^"]+";',
         '',
+        text,
     )
 
 def normalize_file(path: str, text: str) -> str:

@@ -578,6 +578,7 @@ class PsramLogger {
   void markEnergyControlV0EventOverflow() { energy_control_v0_event_overflow_ = true; }
   void setCalibrationResult(const CalibrationResult& result);
   void markMeasurementDone();
+  bool prepareRwLog();
 
   bool ready() const { return ready_; }
   const char* lastError() const { return last_error_; }
@@ -585,6 +586,14 @@ class PsramLogger {
   uint64_t runStartUs() const { return run_start_us_; }
   bool lastMeasurementDone() const { return last_measurement_done_; }
   bool downloading() const { return downloading_; }
+  bool rwlogPrepared() const { return rwlog_prepared_; }
+  bool rwlogPrepareAttempted() const { return rwlog_prepare_attempted_; }
+  const char* rwlogPrepareState() const { return rwlog_prepare_state_; }
+  size_t preparedMetadataBytes() const { return prepared_metadata_.length(); }
+  size_t preparedTotalBytes() const { return prepared_total_size_; }
+  uint32_t prepareMetadataUs() const { return prepare_metadata_us_; }
+  uint32_t prepareCrcUs() const { return prepare_crc_us_; }
+  uint32_t prepareTotalUs() const { return prepare_total_us_; }
 
   bool addSample(const LogSample& row);
   bool addPulseAuditSample(const PulseAuditSample& row);
@@ -669,6 +678,16 @@ private:
   uint16_t timing_probe_event_count_ = 0;
   bool timing_probe_event_overflow_ = false;
   CalibrationResult calibration_result_;
+  String prepared_metadata_;
+  RwLogFileHeader prepared_header_{};
+  uint32_t prepared_crc_ = 0;
+  size_t prepared_total_size_ = 0;
+  uint32_t prepare_metadata_us_ = 0;
+  uint32_t prepare_crc_us_ = 0;
+  uint32_t prepare_total_us_ = 0;
+  bool rwlog_prepare_attempted_ = false;
+  bool rwlog_prepared_ = false;
+  const char* rwlog_prepare_state_ = "not_prepared";
   bool last_measurement_done_ = false;
   bool downloading_ = false;
   bool ready_ = false;

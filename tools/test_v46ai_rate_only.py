@@ -13,11 +13,11 @@ assert 'energyControlAutonomousFreeNextPeakAmplitude' not in runner+header
 assert 'ENERGY_CONTROL_AUTONOMOUS_P1_FREE_DECAY_' not in runner+config
 call='const auto baseline = rate_baseline::evaluate(\n      event.zero_cross_abs_rate_dps, event.physical_next_peak_side);'
 assert runner.count(call)==1
-start=runner.index(call);layer=runner.index('// V46al-R1 previous-peak active control begin',start)
+start=runner.index(call);layer=runner.index('// V46al-R2 previous-peak active control begin',start)
 assert start<layer<runner.index('event.passive_energy_j = energyControlPotentialJ',layer)
 assert 'event.p1_free_peak_before_rate_deg = NAN;' in runner[start:layer]
 assert 'event.rate_baseline_correction_deg = NAN;' in runner[start:layer]
-assert 'event.free_next_peak_before_previous_peak_correction_deg = baseline.adjusted_deg;' in runner[layer:]
+assert 'previous_peak_control::evaluate(' in runner[layer:]\nassert 'event.free_next_peak_amplitude_deg = previous_peak_result.corrected_free_peak_deg;' in runner[layer:]
 for forbidden in ['previous_peak_deg','target_deg','t_test_ms','compensation_us','OUTSIDE_STATE','WARMUP','OTHER_SETTINGS']:
     assert forbidden not in helper,forbidden
 parts=[]

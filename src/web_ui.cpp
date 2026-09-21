@@ -136,6 +136,8 @@ void WebUi::begin(WebServer& server, ExperimentRunner& runner, ImuManager& imu, 
   server_->on("/current-roll/target", HTTP_POST, [this]() { handleSetCurrentRollTarget(); });
   server_->on("/q1-shadow/target", HTTP_POST, [this]() { handleSetQ1ShadowTargetPeakAbs(); });
   server_->on("/download/rwlog", HTTP_GET, [this]() { handleRwLog(); });
+  const char* collected_headers[] = {"Range"};
+  server_->collectHeaders(collected_headers, 1);
   server_->enableDelay(false);  // Empty HTTP polls must not add sleeps to idle acquisition.
   server_->begin();
 }

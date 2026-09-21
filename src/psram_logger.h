@@ -341,13 +341,6 @@ class PsramLogger {
     float rate_baseline_peak_deg = NAN;
     float rate_baseline_correction_deg = NAN;  // retired P1-difference column
     uint8_t rate_baseline_reason = 255;
-    // V46al-R1 previous-peak control metadata only; RWLOG time-series layout stays v51.
-    float free_next_peak_before_previous_peak_correction_deg = NAN;
-    float previous_peak_control_raw_correction_deg = NAN;
-    float previous_peak_control_correction_deg = 0.0f;
-    uint8_t previous_peak_control_reason = 255;
-    bool previous_peak_control_applied = false;
-    bool previous_peak_control_clamped = false;
     float passive_energy_j = NAN;
     float target_peak_deg = NAN;
     float target_energy_j = NAN;

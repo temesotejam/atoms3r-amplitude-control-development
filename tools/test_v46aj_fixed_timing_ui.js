@@ -16,7 +16,7 @@ const get=id=>{assert(elements.has(id),'Missing DOM element: '+id);return elemen
 const isDisabled=e=>e.tagName==='A'?e.classList.contains('disabled'):e.disabled;
 for(const id of ['summary','startupInfo','errorInfo','energyTarget','energy','stop','rwlog','resumeDownload','clear'])get(id);
 for(const removed of ['passive','shadowTarget','zero','target','abs','current','rate','targetError'])assert(!elements.has(removed),removed);
-assert(html.includes('V46an / 0.46.39'));
+assert(html.includes('V46ao / 0.46.40'));
 assert(html.includes('ZEROクロス補償3 ms固定'));
 assert(!html.includes('Q1 direct next-peak shadow'));
 assert(!html.includes('Passive release capture'));
@@ -86,5 +86,5 @@ const ready={
   await replyJson(postDownloadStatus,ready);
   assert(!isDisabled(get('rwlog')));
 
-  console.log('V46an minimal UI PASS: native RWLOG download starts from anchor; polling stays paused until explicit resume');
+  console.log('V46ao minimal UI PASS: native RWLOG download retained; polling stays paused until explicit resume');
 })().catch(error=>{console.error(error);process.exitCode=1;});

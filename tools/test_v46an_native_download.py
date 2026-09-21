@@ -10,7 +10,7 @@ site=(R/'site/index.html').read_text()
 
 assert 'ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920"' in config
 assert 'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"' in config
-assert 'RWLOG_DOWNLOAD_REVISION[] = "v46an_native_download_hold_20260921"' in config
+assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ao_http_range_resume_20260921"' in config
 assert manifest['version'] in ('0.46.39','0.46.40')
 assert 'V46an / 0.46.39' in site or 'V46ao / 0.46.40' in site
 

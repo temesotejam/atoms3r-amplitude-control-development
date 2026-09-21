@@ -1,6 +1,6 @@
 {
-  "name": "AtomS3R V46aq V46al Download Restore",
-  "version": "0.46.42",
+  "name": "AtomS3R V46ar Prepared RWLOG",
+  "version": "0.46.43",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

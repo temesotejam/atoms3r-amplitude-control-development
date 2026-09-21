@@ -30,7 +30,12 @@ def normalize_file(path: str, text: str) -> str:
         compact_start = text.find("  if (energy_control_autonomous_mode_) {\n    auto ageToU16")
         compact_end = text.find("  LogSample row{};", compact_start)
         if compact_start >= 0 and compact_end >= 0:
-            text = text[:compact_start] + text[compact_end:]
+            # The V46as block is separated from the frozen LogSample path by one
+            # extra blank line. Remove that separator as part of the inverse.
+            cut_start = compact_start
+            if compact_start >= 2 and text[compact_start - 2:compact_start] == "\n\n":
+                cut_start -= 1
+            text = text[:cut_start] + text[compact_end:]
         start = text.find("void ExperimentRunner::logSampleIfDue() {")
         end = text.find("void ExperimentRunner::logSampleNow() {", start)
         if start >= 0 and end >= 0 and "addPulseAuditSample" in text[start:end]:

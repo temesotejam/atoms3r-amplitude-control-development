@@ -1,6 +1,6 @@
 {
-  "name": "AtomS3R V46ao Resumable RWLOG Download",
-  "version": "0.46.40",
+  "name": "AtomS3R V46ap Compact RWLOG",
+  "version": "0.46.41",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

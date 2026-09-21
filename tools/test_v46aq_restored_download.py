@@ -9,14 +9,16 @@ web=(R/'src/web_ui.cpp').read_text()
 manifest=json.loads((R/'site/manifest.json').read_text())
 site=(R/'site/index.html').read_text()
 
-assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config
+assert ('RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config or
+        'RWLOG_DOWNLOAD_REVISION[] = "v46at_partial_write_safe_20260921"' in config)
 assert ('RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config or
         'RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921"' in config)
 
-# Exact V46al-style server transport.
-assert 'STREAM_CHUNK_BYTES = 4096' in logger
+# Single HTTP-200 server transport remains direct. Later V46at makes the same
+# path partial-write-safe without adding Range/native download.
 assert 'WiFiClient client = server.client();' in logger
-assert 'if (client.write(data, n) != n) return false;' in logger
+assert ('if (client.write(data, n) != n) return false;' in logger or
+        'rwlog_write_all::writeAll' in logger)
 assert ('server.setContentLength(header.crc_offset + sizeof(crc));' in logger or
         'server.setContentLength(prepared_total_size_);' in logger)
 assert 'server.send(200, "application/octet-stream", "");' in logger
@@ -49,9 +51,9 @@ assert 'collectHeaders' not in web
 assert '"Range"' not in web
 assert "fetch('/download/rwlog'" not in web
 
-assert manifest['version'] in ('0.46.42','0.46.43','0.46.44')
-assert 'V46aq' in manifest['name'] or 'V46ar' in manifest['name'] or 'V46as' in manifest['name']
-assert 'V46aq / 0.46.42' in site or 'V46ar / 0.46.43' in site or 'V46as / 0.46.44' in site
+assert manifest['version'] in ('0.46.42','0.46.43','0.46.44','0.46.45')
+assert 'V46aq' in manifest['name'] or 'V46ar' in manifest['name'] or 'V46as' in manifest['name'] or 'V46at' in manifest['name']
+assert 'V46aq / 0.46.42' in site or 'V46ar / 0.46.43' in site or 'V46as / 0.46.44' in site or 'V46at / 0.46.45' in site
 
 # Control/safety are not part of this rollback.
 for token in (

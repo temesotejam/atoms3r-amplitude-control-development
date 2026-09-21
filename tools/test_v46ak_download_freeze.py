@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import hashlib
 
 ROOT = Path(__file__).resolve().parents[1]
 web = (ROOT / "src/web_ui.cpp").read_text(encoding="utf-8").replace("\r\n", "\n")
 logger = (ROOT / "src/psram_logger.cpp").read_text(encoding="utf-8").replace("\r\n", "\n")
+
+def git_blob_sha(path: Path) -> str:
+    data = path.read_bytes()
+    header = f"blob {len(data)}\\0".encode()
+    return hashlib.sha1(header + data).hexdigest()
+
+# Full logger/converter files are frozen to the verified stable blobs.
+assert git_blob_sha(ROOT / "src/psram_logger.cpp") == "e61167fba2869ad948df37d999a7bcb6e5346817"
+assert git_blob_sha(ROOT / "src/psram_logger.h") == "63a16781660142a5e3a82721f90cadd9cc2ce9b7"
+assert git_blob_sha(ROOT / "tools/convert_rwlog_to_csv.py") == "7a2c1229376e1ec204a3d9305cedf0b67af7a231"
 
 
 def extract_function(text: str, signature: str) -> str:
@@ -78,4 +89,4 @@ assert extract_function(web, "void WebUi::handleRwLog()") == expected_handle
 assert extract_function(logger, "bool PsramLogger::writeBytes(") == expected_write
 assert extract_function(logger, "bool PsramLogger::streamRwLog(") == expected_stream
 
-print("RWLOG download freeze PASS: route, 4096-byte direct writer and stream path are unchanged")
+print("RWLOG download freeze PASS: full logger/converter blobs and direct download path equal stable")

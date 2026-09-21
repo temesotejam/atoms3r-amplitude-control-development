@@ -125,6 +125,7 @@ static constexpr char ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensa
 static constexpr char AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920";
 // V46al previous-peak active control begin
 static constexpr char AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921";
+static constexpr char RWLOG_DOWNLOAD_REVISION[] = "v46am_fetch_backpressure_20260921";
 static constexpr char ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION[] =
     "V46AK_5RUN_8DEG_10TO30S_PREV_RESIDUAL_20260921";
 static constexpr bool ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_CONTROL_ENABLED = true;

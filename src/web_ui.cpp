@@ -73,7 +73,7 @@ footer{text-align:center;color:#87919c;font-size:.76rem;padding:4px 0 14px}
   <div class="card">
     <h2>8° 振幅制御測定</h2>
     <div class="fixed">
-      目標ピーク <b>8.0°</b> ／ 測定 <b>30秒</b> ／ 遅延補償 <b>3 ms固定</b><br>
+      目標ピーク <b>8.0°</b> ／ 測定 <b>30秒</b> ／ 遅延補償：3 ms固定<br>
       測定中はWeb表示の更新を最小限にし、制御処理を優先します。
     </div>
     <button id="energy" class="primary" disabled onclick="startEnergy()">8°測定を開始</button>

@@ -43,7 +43,10 @@ assert 'prepared_metadata_' in stream
 assert 'prepared_crc_' in stream
 assert 'server.setContentLength(prepared_total_size_)' in stream
 
-assert 'return ready_ && run_start_us_ != 0 && sample_count_ > 0 && rwlog_prepared_;' in logger
+assert 'const size_t active_sample_count =' in logger
+assert 'energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_' in logger
+assert 'active_sample_count == 0' in logger
+assert '(energy_control_autonomous_mode_ ? autonomous_sample_count_ > 0 : sample_count_ > 0)' in logger
 
 assert 'logger_->lastMeasurementDone() && !logger_->rwlogPrepareAttempted()' in web
 assert 'logger_->prepareRwLog();' in web

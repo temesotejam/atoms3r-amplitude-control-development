@@ -39,6 +39,7 @@ jobs:
           python tools/test_v46ae_mekf_amplitude.py
           python tools/test_v46ai_rate_only.py
           python tools/test_v46ak_pre_input_observation.py
+          python tools/test_v46ak_web_backend_cleanup.py
           g++ -std=c++11 -O2 tools/test_v46n_acquisition.cpp -o /tmp/test_acq
           /tmp/test_acq
           g++ -std=c++17 -O2 -Wall -Wextra -Werror -Itools/host_v46o tools/test_v46o_startup.cpp -o /tmp/test_v46o

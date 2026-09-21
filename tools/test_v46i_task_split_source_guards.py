@@ -47,12 +47,14 @@ assert 'Control-core API: queue a desired current; no Roller I2C is performed he
 assert 'roller_->telemetry()' not in runner
 assert 'roller_->telemetry()' not in web
 assert runner.count('telemetrySnapshot()') >= 2
-assert 'roller_io_task_running' in web
-assert 'roller_io_task_ready' in web
-assert 'roller_io_task_init_failed' in web
-assert 'roller_io_init_attempt_count' in web
-assert 'roller_io_recovery_count' in web
-assert 'roller_command_latency_max_us' in web
+# The simplified V46ak UI intentionally exposes only the Roller health/current/battery
+# fields it renders; detailed Core-0 diagnostics remain in firmware/RWLOG, not status.json.
+for token in ('roller_io_task_running', 'roller_io_task_ready', 'roller_io_task_init_failed',
+              'roller_io_init_attempt_count', 'roller_io_recovery_count',
+              'roller_command_latency_max_us'):
+    assert token not in web, token
+for token in ('roller_ok', 'roller_actual_current_mA', 'battery_mV'):
+    assert token in web, token
 assert ('AtomS3R V46q MEKF Motor Validation' in manifest or
         'AtomS3R V46aj Fast Solver Motor Validation' in manifest or
         'AtomS3R V46ak Pre-Input State Observation' in manifest)

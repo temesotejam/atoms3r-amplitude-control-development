@@ -10,7 +10,7 @@ active=loop[loop.index('if (run_control.active()) {'):loop.index('// Idle owners
 assert 'web.update();' in active and 'return;' in active
 for token in ('runner.','imu.','logger.','M5.'): assert token not in active, token
 assert loop.index('web.update();',loop.index('// Idle ownership'))<loop.index('if (runner.running())')<loop.index('run_control.start()')
-for name in ('handleStartPassive','handleStartEnergyControlV0','handleStartEnergyControlAutonomous','handleSetEnergyControlAutonomousTarget','handleStartQIdent','handleStart','handleStartZeroCross','handleStartIdentification','handleStartControl','handleZero','handleCurrentRollZero','handleSetCurrentRollTarget','handleSetQ1ShadowTargetPeakAbs','handleClear','handleSettings','handleRwLog','handleRoot'):
+for name in ('handleStartEnergyControlAutonomous','handleStartQIdent','handleStart','handleStartZeroCross','handleStartIdentification','handleStartControl','handleZero','handleClear','handleRwLog','handleRoot'):
     body=web.split('void WebUi::'+name+'() {',1)[1].split('\nvoid WebUi::',1)[0]
     assert 'run_control.active()' in body,name
     gate=body.index('run_control.active()')

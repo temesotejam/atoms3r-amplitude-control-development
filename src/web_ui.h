@@ -14,24 +14,16 @@ private:
   void handleRoot();
   void handleStatus();
   void handleStart();
-  void handleStartPassive();
   void handleStartQIdent();
-  void handleStartEnergyControlV0();
   void handleStartEnergyControlAutonomous();
-  void handleSetEnergyControlAutonomousTarget();
   void handleStartZeroCross();
   void handleStartIdentification();
   void handleStartControl();
   void handleZero();
-  void handleCurrentRollZero();
-  void handleSetCurrentRollTarget();
-  void handleSetQ1ShadowTargetPeakAbs();
   void handleStop();
   void handleClear();
-  void handleSettings();
   void handleRwLog();
   String statusJson() const;
-  static void appendJsonUint64(String& json, uint64_t value);
 
   WebServer* server_ = nullptr;
   ExperimentRunner* runner_ = nullptr;

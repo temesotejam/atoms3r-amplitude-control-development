@@ -35,7 +35,7 @@ web = Path("src/web_ui.cpp").read_text(encoding="utf-8")
 assert "if(refreshInFlight)return;" in web
 # V46o+: a bounded, fixed-size heartbeat replaces the 41-second blind pause.
 assert "setInterval(refresh,1000)" in web
-status_region = web[web.index("void WebUi::handleStatus()"):web.index("void WebUi::handleStartPassive()")]
+status_region = web[web.index("void WebUi::handleStatus()"):web.index("void WebUi::handleStartEnergyControlAutonomous()")]
 assert "char body[192]" in status_region
 assert status_region.index("return;") < status_region.index("statusJson()")
 assert "41000" not in web

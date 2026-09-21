@@ -11,7 +11,8 @@ extern Roller485Manager roller;
 
 #include "config.h"
 
-static constexpr uint16_t RWLOG_FORMAT_VERSION = 51;
+static constexpr uint16_t RWLOG_FORMAT_VERSION_LEGACY = 51;
+static constexpr uint16_t RWLOG_FORMAT_VERSION_AUTONOMOUS_COMPACT = 52;
 static constexpr uint32_t RWLOG_FLAG_CRC32 = 1U << 0;
 static constexpr size_t STREAM_CHUNK_BYTES = 4096;
 
@@ -119,6 +120,14 @@ bool PsramLogger::begin() {
     return false;
   }
 
+  autonomous_sample_capacity_ = Config::AUTONOMOUS_LOG_BUFFER_BYTES / sizeof(AutonomousCompactSample);
+  autonomous_samples_ = static_cast<AutonomousCompactSample*>(
+      ps_malloc(autonomous_sample_capacity_ * sizeof(AutonomousCompactSample)));
+  if (!autonomous_samples_) {
+    last_error_ = "autonomous_log_psram_allocation_failed";
+    return false;
+  }
+
   pulse_audit_capacity_ = Config::PULSE_AUDIT_BUFFER_BYTES / sizeof(PulseAuditSample);
   pulse_audit_samples_ = static_cast<PulseAuditSample*>(
       ps_malloc(pulse_audit_capacity_ * sizeof(PulseAuditSample)));
@@ -143,6 +152,7 @@ bool PsramLogger::begin() {
 void PsramLogger::clear() {
   if (downloading_) return;
   sample_count_ = 0;
+  autonomous_sample_count_ = 0;
   pulse_audit_count_ = 0;
   current_run_id_ = 0;
   run_start_us_ = 0;
@@ -204,6 +214,7 @@ void PsramLogger::startRun(uint16_t run_id, uint64_t run_start_us, int16_t curre
                              bool energy_control_autonomous_mode) {
   if (downloading_) return;
   sample_count_ = 0;
+  autonomous_sample_count_ = 0;
   pulse_audit_count_ = 0;
   current_run_id_ = run_id;
   run_start_us_ = run_start_us;
@@ -442,6 +453,13 @@ bool PsramLogger::addSample(const LogSample& row) {
   return true;
 }
 
+bool PsramLogger::addAutonomousSample(const AutonomousCompactSample& row) {
+  if (!ready_ || downloading_ || !autonomous_samples_ ||
+      autonomous_sample_count_ >= autonomous_sample_capacity_) return false;
+  autonomous_samples_[autonomous_sample_count_++] = row;
+  return true;
+}
+
 bool PsramLogger::addPulseAuditSample(const PulseAuditSample& row) {
   if (!ready_ || downloading_ || !pulse_audit_samples_ ||
       pulse_audit_count_ >= pulse_audit_capacity_) return false;
@@ -450,8 +468,10 @@ bool PsramLogger::addPulseAuditSample(const PulseAuditSample& row) {
 }
 
 uint8_t PsramLogger::usagePercent() const {
-  if (sample_capacity_ == 0) return 0;
-  return static_cast<uint8_t>((sample_count_ * 100ULL) / sample_capacity_);
+  const size_t capacity = energy_control_autonomous_mode_ ? autonomous_sample_capacity_ : sample_capacity_;
+  const size_t count = energy_control_autonomous_mode_ ? autonomous_sample_count_ : sample_count_;
+  if (capacity == 0) return 0;
+  return static_cast<uint8_t>((count * 100ULL) / capacity);
 }
 
 bool PsramLogger::warningLevel() const {
@@ -459,7 +479,9 @@ bool PsramLogger::warningLevel() const {
 }
 
 bool PsramLogger::rwlogDownloadable() const {
-  return ready_ && run_start_us_ != 0 && sample_count_ > 0 && rwlog_prepared_;
+  return ready_ && run_start_us_ != 0 &&
+      (energy_control_autonomous_mode_ ? autonomous_sample_count_ > 0 : sample_count_ > 0) &&
+      rwlog_prepared_;
 }
 
 void PsramLogger::downloadFilename(char* out, size_t out_len) const {
@@ -485,7 +507,7 @@ String PsramLogger::buildMetadataJson() const {
   // calibration/shadow/solver experiment payloads remain available to their old
   // modes below, but are not rebuilt for the current amplitude-control run.
   if (energy_control_autonomous_mode_) {
-    static constexpr size_t kCompactMetadataReserveBytes = 192U * 1024U;
+    static constexpr size_t kCompactMetadataReserveBytes = 64U * 1024U;
     String json;
     if (!json.reserve(kCompactMetadataReserveBytes)) {
       return String("{\"metadata_error\":\"compact_reserve_failed\"}");
@@ -509,7 +531,8 @@ String PsramLogger::buildMetadataJson() const {
     json += "\"rwlog_storage_revision\":\"" + String(Config::RWLOG_STORAGE_REVISION) + "\",";
     json += "\"previous_peak_control_model_revision\":\"" +
         String(Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION) + "\",";
-    json += "\"sample_size\":" + String(sizeof(LogSample)) + ",";
+    json += "\"sample_size\":" + String(sizeof(AutonomousCompactSample)) + ",";
+    json += "\"sample_count\":" + String(autonomous_sample_count_) + ",";
     json += "\"log_period_ms\":" + String(Config::LOG_PERIOD_MS) + ",";
     json += "\"pulse_audit_period_us\":" + String(Config::CURRENT_AUDIT_LOG_PERIOD_US) + ",";
     json += "\"pulse_audit_sample_size\":" + String(sizeof(PulseAuditSample)) + ",";
@@ -1925,15 +1948,17 @@ String PsramLogger::buildMetadataJson() const {
 RwLogFileHeader PsramLogger::buildHeader(uint32_t metadata_size) const {
   RwLogFileHeader header{};
   memcpy(header.magic, "RWLOG01", 8);
-  header.format_version = RWLOG_FORMAT_VERSION;
+  const bool compact_autonomous = energy_control_autonomous_mode_;
+  header.format_version = compact_autonomous
+      ? RWLOG_FORMAT_VERSION_AUTONOMOUS_COMPACT : RWLOG_FORMAT_VERSION_LEGACY;
   header.header_size = sizeof(RwLogFileHeader);
   header.run_id = current_run_id_;
   header.run_start_us = run_start_us_;
   header.metadata_json_size = metadata_size;
-  header.sample_count = sample_count_;
+  header.sample_count = compact_autonomous ? autonomous_sample_count_ : sample_count_;
   header.summary_count = pulse_audit_count_;
   header.event_count = 0;
-  header.log_sample_size = sizeof(LogSample);
+  header.log_sample_size = compact_autonomous ? sizeof(AutonomousCompactSample) : sizeof(LogSample);
   header.summary_row_size = sizeof(PulseAuditSample);
   header.event_row_size = 0;
   header.log_period_ms = Config::LOG_PERIOD_MS;
@@ -1948,7 +1973,10 @@ RwLogFileHeader PsramLogger::buildHeader(uint32_t metadata_size) const {
   header.preset_id = 32;
   header.flags = RWLOG_FLAG_CRC32;
   header.samples_offset = sizeof(RwLogFileHeader) + metadata_size;
-  header.summaries_offset = header.samples_offset + sample_count_ * sizeof(LogSample);
+  header.summaries_offset = header.samples_offset +
+      (compact_autonomous
+          ? autonomous_sample_count_ * sizeof(AutonomousCompactSample)
+          : sample_count_ * sizeof(LogSample));
   header.events_offset = header.summaries_offset + pulse_audit_count_ * sizeof(PulseAuditSample);
   header.crc_offset = header.events_offset;
   return header;
@@ -1969,7 +1997,13 @@ uint32_t PsramLogger::calculateCrc(const RwLogFileHeader& header, const String& 
   uint32_t crc = 0;
   crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(&header), sizeof(header));
   crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(metadata.c_str()), metadata.length());
-  crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(samples_), sample_count_ * sizeof(LogSample));
+  if (energy_control_autonomous_mode_) {
+    crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(autonomous_samples_),
+                      autonomous_sample_count_ * sizeof(AutonomousCompactSample));
+  } else {
+    crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(samples_),
+                      sample_count_ * sizeof(LogSample));
+  }
   crc = crc32Update(crc, reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
                     pulse_audit_count_ * sizeof(PulseAuditSample));
   return crc;
@@ -2007,7 +2041,13 @@ bool PsramLogger::streamRwLog(WebServer& server) {
   bool ok = true;
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&prepared_header_), sizeof(prepared_header_));
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(prepared_metadata_.c_str()), prepared_metadata_.length());
-  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(samples_), sample_count_ * sizeof(LogSample));
+  if (energy_control_autonomous_mode_) {
+    ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(autonomous_samples_),
+                          autonomous_sample_count_ * sizeof(AutonomousCompactSample));
+  } else {
+    ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(samples_),
+                          sample_count_ * sizeof(LogSample));
+  }
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
                         pulse_audit_count_ * sizeof(PulseAuditSample));
   ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&prepared_crc_), sizeof(prepared_crc_));

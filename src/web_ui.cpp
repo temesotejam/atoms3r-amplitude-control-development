@@ -11,7 +11,7 @@ static const char INDEX_HTML[] PROGMEM = R"HTML(
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AtomS3R Amplitude Control</title><style>
 body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}header{padding:16px;background:#263341;color:#fff}header h1{font-size:1.25rem;margin:0 0 5px}header div{font-size:.84rem;opacity:.85}main{padding:14px;max-width:620px;margin:auto}.card{border:1px solid #c5ced8;background:#fff;padding:14px;border-radius:8px;margin:12px 0}.card h2{font-size:1rem;margin:0 0 10px}.status{font-size:.95rem;line-height:1.55}.error{color:#a11d27;font-weight:600}.note{font-size:.88rem;line-height:1.5;color:#536273;margin:8px 0}button,select,a.action{box-sizing:border-box;width:100%;margin-top:10px;border:1px solid #b8c2ce;padding:11px;border-radius:6px;font-size:16px}button,a.action{background:#1769e0;color:#fff;text-align:center;text-decoration:none}select{background:#fff;color:#17202a}button.danger{background:#c4262e;border-color:#c4262e}button.secondary{background:#566575;border-color:#566575}button:disabled,select:disabled,a.action.disabled{opacity:.42;pointer-events:none}[hidden]{display:none!important}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}details{margin-top:10px;font-size:.9rem}code{font-size:.9em}@media(max-width:520px){.row{grid-template-columns:1fr}}</style></head><body>
-<header><h1>AtomS3R Amplitude Control</h1><div>V46ao / 0.46.40 — V46al control + resumable RWLOG download</div></header>
+<header><h1>AtomS3R Amplitude Control</h1><div>V46ap / 0.46.41 — V46al control + compact RWLOG logging</div></header>
 <main>
   <section class="card">
     <h2>状態</h2>
@@ -486,6 +486,8 @@ String WebUi::statusJson() const {
   json += ",\"sample_count\":" + String(logger_->sampleCount());
   json += ",\"psram_usage_percent\":" + String(logger_->usagePercent());
   json += ",\"log_capacity\":" + String(logger_->sampleCapacity());
+  json += ",\"pulse_audit_count\":" + String(logger_->pulseAuditCount());
+  json += ",\"pulse_audit_capacity\":" + String(logger_->pulseAuditCapacity());
   json += ",\"rwlog_downloadable\":\"" + String(logger_->rwlogDownloadable() ? "yes" : "no") + "\"";
   json += ",\"download_filename\":\"" + String(filename) + "\"";
   json += ",\"run_id\":" + String(logger_->currentRunId());

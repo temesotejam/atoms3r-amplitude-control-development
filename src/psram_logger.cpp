@@ -1,6 +1,4 @@
 #include "psram_logger.h"
-#include "rwlog_stream_transport.h"
-#include "rwlog_http_range.h"
 #include "imu_manager.h"
 extern ImuManager imu;
 #include "run_control_worker.h"
@@ -15,6 +13,7 @@ extern Roller485Manager roller;
 
 static constexpr uint16_t RWLOG_FORMAT_VERSION = 51;
 static constexpr uint32_t RWLOG_FLAG_CRC32 = 1U << 0;
+static constexpr size_t STREAM_CHUNK_BYTES = 4096;
 
 namespace {
 String jsonFloatOrNull(float value, unsigned int decimals) {
@@ -1903,10 +1902,14 @@ uint32_t PsramLogger::calculateCrc(const RwLogFileHeader& header, const String& 
 
 bool PsramLogger::writeBytes(WebServer& server, const uint8_t* data, size_t len) {
   WiFiClient client = server.client();
-  return rwlog_stream_transport::writeAll(
-      client, data, len,
-      []() -> uint32_t { return millis(); },
-      [](uint32_t ms) { delay(ms); });
+  while (len > 0) {
+    const size_t n = len > STREAM_CHUNK_BYTES ? STREAM_CHUNK_BYTES : len;
+    if (client.write(data, n) != n) return false;
+    data += n;
+    len -= n;
+    delay(0);
+  }
+  return true;
 }
 
 bool PsramLogger::streamRwLog(WebServer& server) {
@@ -1920,62 +1923,21 @@ bool PsramLogger::streamRwLog(WebServer& server) {
   const String metadata = buildMetadataJson();
   const RwLogFileHeader header = buildHeader(metadata.length());
   const uint32_t crc = calculateCrc(header, metadata);
-  const size_t total_size = static_cast<size_t>(header.crc_offset) + sizeof(crc);
-
-  const String range_header = server.hasHeader("Range") ? server.header("Range") : String();
-  const auto parsed_range = rwlog_http_range::parse(range_header.c_str(), total_size);
-  if (parsed_range.status == rwlog_http_range::INVALID ||
-      parsed_range.status == rwlog_http_range::UNSATISFIABLE) {
-    downloading_ = false;
-    last_error_ = "rwlog_range_invalid";
-    server.sendHeader("Accept-Ranges", "bytes");
-    server.sendHeader("Content-Range", String("bytes */") +
-        String(static_cast<unsigned long>(total_size)));
-    server.sendHeader("Connection", "close");
-    server.send(416, "text/plain", last_error_);
-    return false;
-  }
-
-  const bool partial = parsed_range.status == rwlog_http_range::VALID;
-  const size_t range_start = partial ? parsed_range.start : 0;
-  const size_t range_end = partial ? parsed_range.end : total_size - 1;
-  const size_t range_length = range_end - range_start + 1;
-
   char filename[72];
   downloadFilename(filename, sizeof(filename));
+
   server.sendHeader("Content-Disposition", String("attachment; filename=\"") + filename + "\"");
   server.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-  server.sendHeader("Connection", "close");
-  server.sendHeader("Accept-Ranges", "bytes");
-  server.sendHeader("X-RWLOG-Transport", "v46ao-range-resume");
-  if (partial) {
-    server.sendHeader("Content-Range", String("bytes ") +
-        String(static_cast<unsigned long>(range_start)) + "-" +
-        String(static_cast<unsigned long>(range_end)) + "/" +
-        String(static_cast<unsigned long>(total_size)));
-  }
-  server.setContentLength(range_length);
-  server.send(partial ? 206 : 200, "application/octet-stream", "");
+  server.setContentLength(header.crc_offset + sizeof(crc));
+  server.send(200, "application/octet-stream", "");
 
   bool ok = true;
-  const size_t request_end_exclusive = range_end + 1;
-  auto write_segment = [&](const uint8_t* data, size_t length, size_t file_offset) {
-    if (!ok || !data || length == 0) return;
-    const size_t segment_end = file_offset + length;
-    const size_t from = range_start > file_offset ? range_start : file_offset;
-    const size_t to = request_end_exclusive < segment_end ? request_end_exclusive : segment_end;
-    if (to <= from) return;
-    ok = writeBytes(server, data + (from - file_offset), to - from);
-  };
-
-  write_segment(reinterpret_cast<const uint8_t*>(&header), sizeof(header), 0);
-  write_segment(reinterpret_cast<const uint8_t*>(metadata.c_str()), metadata.length(),
-                sizeof(RwLogFileHeader));
-  write_segment(reinterpret_cast<const uint8_t*>(samples_),
-                sample_count_ * sizeof(LogSample), header.samples_offset);
-  write_segment(reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
-                pulse_audit_count_ * sizeof(PulseAuditSample), header.summaries_offset);
-  write_segment(reinterpret_cast<const uint8_t*>(&crc), sizeof(crc), header.crc_offset);
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&header), sizeof(header));
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(metadata.c_str()), metadata.length());
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(samples_), sample_count_ * sizeof(LogSample));
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(pulse_audit_samples_),
+                        pulse_audit_count_ * sizeof(PulseAuditSample));
+  ok = ok && writeBytes(server, reinterpret_cast<const uint8_t*>(&crc), sizeof(crc));
 
   downloading_ = false;
   last_error_ = ok ? "" : "rwlog_stream_failed";

@@ -17,7 +17,8 @@ start=runner.index(call);layer=runner.index('// V46al-R2 previous-peak active co
 assert start<layer<runner.index('event.passive_energy_j = energyControlPotentialJ',layer)
 assert 'event.p1_free_peak_before_rate_deg = NAN;' in runner[start:layer]
 assert 'event.rate_baseline_correction_deg = NAN;' in runner[start:layer]
-assert 'previous_peak_control::evaluate(' in runner[layer:]\nassert 'event.free_next_peak_amplitude_deg = previous_peak_result.corrected_free_peak_deg;' in runner[layer:]
+assert 'previous_peak_control::evaluate(' in runner[layer:]
+assert 'event.free_next_peak_amplitude_deg = previous_peak_result.corrected_free_peak_deg;' in runner[layer:]
 for forbidden in ['previous_peak_deg','target_deg','t_test_ms','compensation_us','OUTSIDE_STATE','WARMUP','OTHER_SETTINGS']:
     assert forbidden not in helper,forbidden
 parts=[]

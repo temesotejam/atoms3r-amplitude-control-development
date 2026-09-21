@@ -49,6 +49,6 @@ static constexpr uint8_t BUFFER_WARNING_PERCENT = 90;"""
         pos = text.find(marker)
         if pos >= 0:
             text = text[:pos]
-            text += '\n\nstatic_assert(sizeof(RwLogFileHeader) == 110, "RwLogFileHeader binary size changed");\n'
+            text += '\nstatic_assert(sizeof(RwLogFileHeader) == 110, "RwLogFileHeader binary size changed");\n'
             text += 'static_assert(sizeof(LogSample) == 258, "LogSample binary size changed");\n'
     return text

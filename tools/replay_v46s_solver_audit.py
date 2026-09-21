@@ -25,6 +25,7 @@ FLOAT_FIELDS = 'i0_mA free_peak_deg target_peak_deg target_energy_j passive_ener
 
 def original_runner():
     text = normalize_v46ak_runner((ROOT / 'src/experiment_runner.cpp').read_text())
+    text = normalize_v46al_runner(text)
     text = normalize_current_observation(text)
     text = normalize_v46ac_runner(text)
     text = normalize_v46ab_runner(text)

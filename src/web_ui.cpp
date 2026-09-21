@@ -39,7 +39,7 @@ body{margin:0;font-family:system-ui,sans-serif;background:#f5f7fa;color:#17202a}
   </section>
 </main>
 <script>
-let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0;
+let downloading=false,lastStatus={},displayFrozen=false,refreshInFlight=false,startPending=false,controlEpoch=0,statusController=null;
 const energy=document.getElementById('energy'),energyTarget=document.getElementById('energyTarget'),stop=document.getElementById('stop'),clear=document.getElementById('clear'),rwlog=document.getElementById('rwlog'),resumeDownload=document.getElementById('resumeDownload');
 
 function lock(e,v){if(e.tagName==='A')e.classList.toggle('disabled',v);else e.disabled=v;}
@@ -61,6 +61,7 @@ async function setEnergyTarget(){await post('/energy-control-autonomous/target?d
 function beginNativeRwlogDownload(){
   if(downloading||rwlog.classList.contains('disabled'))return false;
   downloading=true;
+  if(statusController){statusController.abort();statusController=null;refreshInFlight=false;}
   rwlog.textContent='RWLOG download active';
   resumeDownload.hidden=false;
   apply(lastStatus);
@@ -92,8 +93,8 @@ async function refresh(){
   if(refreshInFlight||downloading)return;
   refreshInFlight=true;const epoch=controlEpoch;let timer;
   try{
-    const controller=new AbortController();timer=setTimeout(()=>controller.abort(),1500);
-    const r=await fetch('/status.json',{cache:'no-store',signal:controller.signal});
+    statusController=new AbortController();timer=setTimeout(()=>statusController&&statusController.abort(),1500);
+    const r=await fetch('/status.json',{cache:'no-store',signal:statusController.signal});
     clearTimeout(timer);if(!r.ok)throw new Error('status_failed');
     const status=await r.json();if(epoch!==controlEpoch)return;
     lastStatus=status;
@@ -101,7 +102,7 @@ async function refresh(){
     if(displayFrozen)displayFrozen=false;apply(lastStatus);
   }catch(e){
     if(!displayFrozen)[energy,energyTarget,stop,clear,rwlog].forEach(x=>lock(x,true));
-  }finally{if(timer)clearTimeout(timer);refreshInFlight=false;}
+  }finally{if(timer)clearTimeout(timer);statusController=null;refreshInFlight=false;}
 }
 setInterval(refresh,1000);refresh();
 </script></body></html>

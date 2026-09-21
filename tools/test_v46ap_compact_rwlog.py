@@ -55,9 +55,9 @@ pulse_capacity = (512 * 1024) // 26
 assert main_capacity * 0.020 > 30.0
 assert pulse_capacity * 0.002 > 30.0
 
-assert manifest["version"] == "0.46.41"
-assert "V46ap" in manifest["name"]
-assert "V46ap / 0.46.41" in site
+assert manifest["version"] in ("0.46.41","0.46.42")
+assert "V46ap" in manifest["name"] or "V46aq" in manifest["name"]
+assert "V46ap / 0.46.41" in site or "V46aq / 0.46.42" in site
 
 # V46ap is logging/storage only. Physical output and timing limits remain frozen.
 for token in (

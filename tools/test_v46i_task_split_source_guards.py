@@ -60,9 +60,9 @@ assert ('AtomS3R V46q MEKF Motor Validation' in manifest or
         'AtomS3R V46am RWLOG Download Stability' in manifest or
         'AtomS3R V46an Native RWLOG Download' in manifest or
         'AtomS3R V46ao Resumable RWLOG Download' in manifest or
-        'AtomS3R V46as Autonomous Compact v52' in manifest)
+        'AtomS3R V46at Partial-Write-Safe Download' in manifest)
 assert ('"version": "0.46.16"' in manifest or '"version": "0.46.35"' in manifest or
-        '"version": "0.46.36"' in manifest or '"version": "0.46.37"' in manifest or '"version": "0.46.38"' in manifest or '"version": "0.46.39"' in manifest or '"version": "0.46.40"' in manifest or '"version": "0.46.44"' in manifest)
+        '"version": "0.46.36"' in manifest or '"version": "0.46.37"' in manifest or '"version": "0.46.38"' in manifest or '"version": "0.46.39"' in manifest or '"version": "0.46.40"' in manifest or '"version": "0.46.45"' in manifest)
 print('V46l/V46s dual-core Roller READY guards passed')
 
 # Initialization/recovery must be self-healing, not one-shot.

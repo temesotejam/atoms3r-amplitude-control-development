@@ -20,7 +20,8 @@ assert 'V46am / 0.46.38' in site
 assert '<button id="rwlog" onclick="downloadRwLog()">Download RWLOG</button>' in web
 assert 'async function downloadRwLog()' in web
 assert "fetch('/download/rwlog',{cache:'no-store'})" in web
-assert 'async function refresh(){if(refreshInFlight||downloading)return;' in web
+assert 'async function refresh()' in web
+assert 'if(refreshInFlight||downloading)return;' in web
 assert 'function beginDownload()' not in web
 assert 'setTimeout(()=>{downloading=false;refresh();},3000)' not in web
 

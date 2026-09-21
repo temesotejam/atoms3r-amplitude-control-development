@@ -12,7 +12,7 @@ site = (R / 'site/index.html').read_text(encoding='utf-8')
 
 assert 'v46aj_fixed_3ms_compensation_20260920' in config
 assert manifest['version'] in ('0.46.40','0.46.42')
-assert 'V46ao' in manifest['name'] or 'V46ap' in manifest['name']
+assert 'V46ao' in manifest['name'] or 'V46ap' in manifest['name'] or 'V46aq' in manifest['name']
 assert 'V46ao / 0.46.40' in site or 'V46aq / 0.46.42' in site
 
 # Physical output envelope and safety limits remain unchanged.

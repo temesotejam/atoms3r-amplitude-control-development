@@ -11,9 +11,9 @@ manifest = json.loads((R / 'site/manifest.json').read_text(encoding='utf-8'))
 site = (R / 'site/index.html').read_text(encoding='utf-8')
 
 assert 'v46aj_fixed_3ms_compensation_20260920' in config
-assert manifest['version'] in ('0.46.40','0.46.43')
-assert 'V46ao' in manifest['name'] or 'V46ap' in manifest['name'] or 'V46aq' in manifest['name'] or 'V46ar' in manifest['name']
-assert 'V46ao / 0.46.40' in site or 'V46ar / 0.46.43' in site
+assert manifest['version'] in ('0.46.40','0.46.44')
+assert 'V46ao' in manifest['name'] or 'V46ap' in manifest['name'] or 'V46aq' in manifest['name'] or 'V46ar' in manifest['name'] or 'V46as' in manifest['name']
+assert 'V46ao / 0.46.40' in site or 'V46as / 0.46.44' in site
 
 # Physical output envelope and safety limits remain unchanged.
 for token in (

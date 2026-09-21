@@ -53,7 +53,7 @@ for token in ('roller_io_task_running', 'roller_io_task_ready', 'roller_io_task_
               'roller_io_init_attempt_count', 'roller_io_recovery_count',
               'roller_command_latency_max_us'):
     assert token not in web, token
-for token in ('\"roller_ok\"', '\"roller_actual_current_mA\"', '\"battery_mV\"'):
+for token in ('roller_ok', 'roller_actual_current_mA', 'battery_mV'):
     assert token in web, token
 assert ('AtomS3R V46q MEKF Motor Validation' in manifest or
         'AtomS3R V46aj Fast Solver Motor Validation' in manifest or

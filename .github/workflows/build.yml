@@ -38,6 +38,7 @@ jobs:
           python tools/test_v46ai_rate_only.py
           python tools/test_v46ak_pre_input_observation.py
           python tools/test_v46ak_web_backend_cleanup.py
+          python tools/test_v46ak_download_freeze.py
       - name: Run retained native acquisition, startup, control and MEKF tests
         run: |
           set -euxo pipefail

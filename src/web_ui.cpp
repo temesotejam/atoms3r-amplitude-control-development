@@ -255,21 +255,9 @@ void WebUi::begin(WebServer& server, ExperimentRunner& runner, ImuManager& imu, 
 
   server_->on("/", HTTP_GET, [this]() { handleRoot(); });
   server_->on("/status.json", HTTP_GET, [this]() { handleStatus(); });
-  server_->on("/imu-acquisition.json", HTTP_GET, [this]() {
-    if (run_control.active() || runner_->running()) { server_->send(409, "text/plain", "read_after_run"); return; }
-    server_->sendHeader("Cache-Control", "no-store");
-    server_->send(200, "application/json", imu_->acquisitionDiagnosticsJson());
-  });
-  server_->on("/start-passive", HTTP_POST, [this]() { handleStartPassive(); });
-  server_->on("/start-energy-control-v0", HTTP_POST, [this]() { handleStartEnergyControlV0(); });
   server_->on("/start-energy-control-autonomous", HTTP_POST, [this]() { handleStartEnergyControlAutonomous(); });
-  server_->on("/energy-control-autonomous/target", HTTP_POST, [this]() { handleSetEnergyControlAutonomousTarget(); });
   server_->on("/stop", HTTP_POST, [this]() { handleStop(); });
   server_->on("/clear", HTTP_POST, [this]() { handleClear(); });
-  server_->on("/settings", HTTP_POST, [this]() { handleSettings(); });
-  server_->on("/current-roll/zero", HTTP_POST, [this]() { handleCurrentRollZero(); });
-  server_->on("/current-roll/target", HTTP_POST, [this]() { handleSetCurrentRollTarget(); });
-  server_->on("/q1-shadow/target", HTTP_POST, [this]() { handleSetQ1ShadowTargetPeakAbs(); });
   server_->on("/download/rwlog", HTTP_GET, [this]() { handleRwLog(); });
   server_->enableDelay(false);  // Empty HTTP polls must not add sleeps to idle acquisition.
   server_->begin();
@@ -304,29 +292,6 @@ void WebUi::handleStatus() {
   server_->send(200, "application/json", statusJson());
 }
 
-void WebUi::handleStartPassive() {
-  if (!run_control.ready()) { server_->send(503, "text/plain", "run_control_worker_not_ready"); return; }
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  if (logger_->downloading()) {
-    server_->send(409, "text/plain", "download_in_progress");
-    return;
-  }
-  const bool ok = runner_->startPassiveCapture();
-  server_->send(ok ? 200 : 409, "text/plain", ok ? "passive_capture_started" : "start_failed");
-}
-
-void WebUi::handleStartEnergyControlV0() {
-  if (!run_control.ready()) { server_->send(503, "text/plain", "run_control_worker_not_ready"); return; }
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  if (logger_->downloading()) {
-    server_->send(409, "text/plain", "download_in_progress");
-    return;
-  }
-  const bool ok = runner_->startEnergyControlV0Capture();
-  server_->send(ok ? 200 : 409, "text/plain",
-                ok ? "energy_control_v0_started" : runner_->status().last_error);
-}
-
 void WebUi::handleStartEnergyControlAutonomous() {
   if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
   if (logger_->downloading()) { server_->send(409, "text/plain", "download_in_progress"); return; }
@@ -340,14 +305,6 @@ void WebUi::handleStartEnergyControlAutonomous() {
   imu_->update();
   const bool ok = runner_->startEnergyControlAutonomousCapture();
   server_->send(ok ? 200 : 409, "text/plain", ok ? "energy_control_autonomous_started" : runner_->status().last_error);
-}
-
-void WebUi::handleSetEnergyControlAutonomousTarget() {
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  if (!server_->hasArg("deg")) { server_->send(400, "text/plain", "target_deg_required"); return; }
-  if (runner_->running()) { server_->send(409, "text/plain", "running"); return; }
-  const bool ok = runner_->setEnergyControlAutonomousTarget(server_->arg("deg").toFloat());
-  server_->send(ok ? 200 : 400, "text/plain", ok ? "energy_target_set" : runner_->status().last_error);
 }
 
 void WebUi::handleStartQIdent() {
@@ -423,40 +380,6 @@ void WebUi::handleZero() {
   server_->send(200, "text/plain", "zeroed");
 }
 
-void WebUi::handleCurrentRollZero() {
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  const bool ok = runner_->zeroCurrentRollDisplay();
-  server_->send(ok ? 200 : 409, "text/plain", ok ? "current_roll_zeroed" : runner_->status().last_error);
-}
-
-void WebUi::handleSetCurrentRollTarget() {
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  if (!server_->hasArg("deg")) {
-    server_->send(400, "text/plain", "target_deg_required");
-    return;
-  }
-  if (runner_->running()) {
-    server_->send(409, "text/plain", "running");
-    return;
-  }
-  const bool ok = runner_->setCurrentRollTarget(server_->arg("deg").toFloat());
-  server_->send(ok ? 200 : 400, "text/plain", ok ? "current_roll_target_set" : runner_->status().last_error);
-}
-
-void WebUi::handleSetQ1ShadowTargetPeakAbs() {
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  if (!server_->hasArg("deg")) {
-    server_->send(400, "text/plain", "target_deg_required");
-    return;
-  }
-  if (runner_->running()) {
-    server_->send(409, "text/plain", "running");
-    return;
-  }
-  const bool ok = runner_->setQ1ShadowTargetPeakAbs(server_->arg("deg").toFloat());
-  server_->send(ok ? 200 : 400, "text/plain", ok ? "q1_shadow_target_set" : runner_->status().last_error);
-}
-
 void WebUi::handleStop() {
   if (run_control.requestStop()) {
     server_->send(202, "text/plain", "stop_requested");
@@ -476,24 +399,6 @@ void WebUi::handleClear() {
   server_->send(200, "text/plain", "cleared");
 }
 
-void WebUi::handleSettings() {
-  if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
-  if (runner_->running()) {
-    server_->send(409, "text/plain", "running");
-    return;
-  }
-  const int16_t current_mA = server_->hasArg("current_mA") ? static_cast<int16_t>(server_->arg("current_mA").toInt())
-                                                           : Config::DEFAULT_INPUT_CURRENT_MA;
-  const uint16_t pulse_width_ms =
-      server_->hasArg("pulse_width_ms") ? static_cast<uint16_t>(server_->arg("pulse_width_ms").toInt())
-                                        : Config::DEFAULT_PULSE_WIDTH_MS;
-  const uint16_t input_interval_ms =
-      server_->hasArg("input_interval_ms") ? static_cast<uint16_t>(server_->arg("input_interval_ms").toInt())
-                                           : Config::DEFAULT_INPUT_INTERVAL_MS;
-  runner_->setInputSettings(current_mA, pulse_width_ms, input_interval_ms);
-  server_->send(200, "text/plain", "settings_applied");
-}
-
 void WebUi::handleRwLog() {
   if (run_control.active()) { server_->send(409, "text/plain", "run_in_progress"); return; }
   if (runner_->running()) {
@@ -503,152 +408,38 @@ void WebUi::handleRwLog() {
   logger_->streamRwLog(*server_);
 }
 
-void WebUi::appendJsonUint64(String& json, uint64_t value) {
-  char buf[24];
-  snprintf(buf, sizeof(buf), "%llu", static_cast<unsigned long long>(value));
-  json += buf;
-}
-
 String WebUi::statusJson() const {
   const auto& st = runner_->status();
   const RollerTelemetry roller = roller_->telemetrySnapshot();
+
   char filename[72];
   logger_->downloadFilename(filename, sizeof(filename));
+
   String json;
-  json.reserve(3200);
+  json.reserve(768);
   json += "{";
   json += "\"running\":" + String(runner_->running() ? "true" : "false");
   json += ",\"downloading\":" + String(logger_->downloading() ? "true" : "false");
-  json += ",\"zero_cross_mode\":" + String(runner_->zeroCrossMode() ? "true" : "false");
-  json += ",\"identification_mode\":" + String(runner_->identificationMode() ? "true" : "false");
-  json += ",\"q_run_mode\":\"" + String(runner_->qRunModeName()) + "\"";
-  json += ",\"passive_capture_mode\":" + String(runner_->passiveCaptureMode() ? "true" : "false");
-  json += ",\"q_ident_mode\":" + String(runner_->qIdentMode() ? "true" : "false");
-  json += ",\"energy_control_v0_mode\":" + String(runner_->energyControlV0Mode() ? "true" : "false");
-  json += ",\"energy_control_autonomous_mode\":" + String(runner_->energyControlAutonomousMode() ? "true" : "false");
-  json += ",\"energy_control_autonomous_target_peak_deg\":" + String(runner_->energyControlAutonomousTargetPeakDeg(), 2);
-  json += ",\"autonomous_timing_compensation_ms\":" + String(Config::ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US / 1000);
-  json += ",\"autonomous_timing_compensation_selectable\":false";
-  json += ",\"energy_control_autonomous_phase\":\"" + String(runner_->energyControlAutonomousPhaseName()) + "\"";
-  json += ",\"energy_control_v0_target_peak_deg\":" + String(Config::ENERGY_CONTROL_V0_TARGET_PEAK_DEG, 2);
-  json += ",\"q_ident_armed\":" + String(runner_->qIdentArmed() ? "true" : "false");
-  json += ",\"q_ident_run_schedule_id\":" + String(runner_->qIdentRunScheduleId());
-  json += ",\"q_ident_plus_occurrences\":" + String(runner_->qIdentPlusOccurrenceCount());
-  json += ",\"q_ident_minus_occurrences\":" + String(runner_->qIdentMinusOccurrenceCount());
-  json += ",\"passive_static_window_s\":" + String(static_cast<float>(Config::PASSIVE_STATIC_WINDOW_MS) / 1000.0f, 1);
-  json += ",\"q_probe_schedule_id\":" + String(runner_->qProbeScheduleId());
-  json += ",\"q_probe_schedule_name\":\"" + String(runner_->qProbeScheduleName()) + "\"";
-  json += ",\"q_control_target_peak_deg\":" + String(runner_->controlTargetPeakDeg(), 2);
-  json += ",\"zero_cross_fixed_current_mA\":" + String(runner_->zeroCrossFixedCurrentMa());
   json += ",\"state\":\"" + String(runner_->stateName()) + "\"";
-  json += ",\"state_id\":" + String(static_cast<uint8_t>(st.state));
-  json += ",\"boot_elapsed_s\":" + String(static_cast<float>(st.boot_elapsed_ms) / 1000.0f, 1);
-  json += ",\"measure_elapsed_s\":" + String(static_cast<float>(st.measure_elapsed_ms) / 1000.0f, 1);
-  json += ",\"remaining_s\":" + String(static_cast<float>(st.remaining_ms) / 1000.0f, 1);
-  json += ",\"trial_index\":" + String(st.trial_index);
-  json += ",\"trial_count\":" + String(st.trial_count);
-  json += ",\"trial_elapsed_s\":" + String(static_cast<float>(st.trial_elapsed_ms) / 1000.0f, 1);
-  json += ",\"trial_duration_s\":" + String(static_cast<float>(st.trial_duration_ms) / 1000.0f, 1);
-  json += ",\"pulse_id\":" + String(st.pulse_id);
-  json += ",\"pulse_active\":" + String(st.pulse_active ? "true" : "false");
-  json += ",\"pulse_direction\":" + String(st.pulse_direction);
-  json += ",\"current_mA_setting\":" + String(st.current_mA_setting);
-  json += ",\"pulse_width_ms_setting\":" + String(st.pulse_width_ms_setting);
-  json += ",\"input_interval_ms\":" + String(st.input_interval_ms);
-  json += ",\"predicted_beta_min\":" + String(st.predicted_beta_min, 5);
-  json += ",\"beta_hold_after_input_ms\":" + String(st.beta_hold_after_input_ms_setting);
-  json += ",\"beta_recovery_tau_s_setting\":" + String(st.beta_recovery_tau_s_setting, 3);
-  json += ",\"beta_model_vbat_mV\":" + String(st.beta_model_vbat_mV);
-  json += ",\"predicted_i_goal_mA\":" + String(st.predicted_i_goal_mA);
-  json += ",\"predicted_peak_current_mA\":" + String(st.predicted_peak_current_mA);
-  json += ",\"beta_model_vbat_status\":" + String(st.beta_model_vbat_status);
-  json += ",\"led_state\":" + String(st.led_state ? "true" : "false");
-  json += ",\"sync_event_id\":" + String(st.sync_event_id);
-  json += ",\"led_sync_pattern_id\":\"" + String(Config::LED_SYNC_PATTERN_ID) + "\"";
-  json += ",\"gyro_bias_x_dps\":" + String(st.gyro_bias_x_dps, 5);
-  json += ",\"gyro_bias_y_dps\":" + String(st.gyro_bias_y_dps, 5);
-  json += ",\"gyro_bias_z_dps\":" + String(st.gyro_bias_z_dps, 5);
-  json += ",\"attitude_filter_adopted\":\"MEKF\"";
-  json += ",\"pitch_mekf_control_deg\":" + String(st.pitch_mekf_deg, 3);
-  json += ",\"pitch_mekf_abs_deg\":" + String(st.pitch_mekf_abs_deg, 3);
-  json += ",\"pitch_mekf_predicted_abs_deg\":" + String(st.pitch_mekf_predicted_abs_deg, 3);
-  json += ",\"pitch_mekf_detector_relative_deg\":" + String(st.pitch_mekf_detector_relative_deg, 3);
-  json += ",\"mekf_detector_zero_predicted_abs_deg\":" + String(st.mekf_detector_zero_predicted_abs_deg, 3);
-  json += ",\"mekf_detector_zero_sample_us\":" + String(st.mekf_detector_zero_sample_us);
-  json += ",\"mekf_prediction_horizon_us\":" + String(st.mekf_prediction_horizon_us);
-  json += ",\"pitch_madgwick_dynamic_abs_deg\":" + String(st.pitch_madgwick_dynamic_abs_deg, 3);
-  json += ",\"mekf_accel_confidence\":" + String(st.mekf_accel_confidence, 4);
-  json += ",\"mekf_accel_residual_deg\":" + String(st.mekf_accel_residual_deg, 3);
-  json += ",\"mekf_accel_used\":" + String(st.mekf_accel_used ? "true" : "false");
-  json += ",\"pitch_madgwick_beta1_raw_deg\":" + String(st.pitch_madgwick_beta1_raw_deg, 3);
-  json += ",\"pitch_madgwick_dynamic_raw_deg\":" + String(st.pitch_madgwick_dynamic_raw_deg, 3);
-  json += ",\"pitch_madgwick_beta1_bias_deg\":" + String(st.pitch_madgwick_beta1_bias_deg, 3);
-  json += ",\"pitch_madgwick_dynamic_bias_deg\":" + String(st.pitch_madgwick_dynamic_bias_deg, 3);
-  for (uint8_t i = 0; i < Config::DYNAMIC_BETA_COUNT; ++i) {
-    json += ",\"pitch_beta_series_" + String(i) + "\":" + String(st.pitch_dynamic_beta_deg[i], 3);
-    json += ",\"beta_applied_series_" + String(i) + "\":" + String(st.beta_smooth_series[i], 5);
-  }
-  json += ",\"pitch_gyro_raw_deg\":" + String(st.pitch_gyro_raw_deg, 3);
-  json += ",\"pitch_gyro_bias_corrected_deg\":" + String(st.pitch_gyro_bias_corrected_deg, 3);
-  json += ",\"pitch_accel_only_deg\":" + String(st.pitch_accel_only_deg, 3);
-  json += ",\"gyro_pitch_rate_dps\":" + String(st.gyro_pitch_rate_dps, 4);
-  json += ",\"beta_target\":" + String(st.beta_target, 5);
-  json += ",\"beta_smooth\":" + String(st.beta_smooth, 5);
-  json += ",\"ax_g\":" + String(st.ax_g, 4);
-  json += ",\"ay_g\":" + String(st.ay_g, 4);
-  json += ",\"az_g\":" + String(st.az_g, 4);
-  json += ",\"gx_dps\":" + String(st.gx_dps, 4);
-  json += ",\"gy_dps\":" + String(st.gy_dps, 4);
-  json += ",\"gz_dps\":" + String(st.gz_dps, 4);
-  json += ",\"acc_norm_g\":" + String(st.acc_norm_g, 4);
-  json += ",\"physical_roll_candidate_deg\":" + String(st.physical_roll_candidate_deg, 3);
-  json += ",\"physical_roll_abs_deg\":" + String(st.physical_roll_abs_deg, 3);
-  json += ",\"current_roll_deg\":" + String(st.current_roll_deg, 3);
-  json += ",\"physical_roll_rate_raw_dps\":" + String(st.physical_roll_rate_raw_dps, 4);
-  json += ",\"physical_roll_rate_dps\":" + String(st.physical_roll_rate_dps, 4);
-  json += ",\"display_zero_offset_deg\":" + String(st.display_zero_offset_deg, 3);
-  json += ",\"target_roll_deg\":" + String(st.target_roll_deg, 3);
-  json += ",\"q1_shadow_target_peak_abs_deg\":" + String(runner_->q1ShadowTargetPeakAbsDeg(), 3);
-  json += ",\"q1_shadow_active_target_peak_abs_deg\":" + String(runner_->q1ShadowActiveTargetPeakAbsDeg(), 3);  json += ",\"target_error_deg\":" + String(st.target_error_deg, 3);
-  json += ",\"static_confirmed\":" + String(st.static_confirmed ? "true" : "false");
   json += ",\"ready\":" + String(st.ready ? "true" : "false");
-  json += ",\"static_rate_threshold_dps\":" + String(Config::STATIC_RATE_THRESHOLD_DPS, 3);
-  json += ",\"static_hold_time_ms\":" + String(Config::STATIC_HOLD_TIME_MS);
-  json += ",\"target_tolerance_deg\":" + String(Config::TARGET_TOLERANCE_DEG, 3);
+  json += ",\"energy_control_autonomous_target_peak_deg\":" +
+          String(runner_->energyControlAutonomousTargetPeakDeg(), 2);
+  json += ",\"pitch_mekf_control_deg\":" + String(st.pitch_mekf_deg, 3);
+  json += ",\"physical_roll_rate_dps\":" + String(st.physical_roll_rate_dps, 4);
   json += ",\"motor_cmd_mA\":" + String(st.motor_cmd_mA);
-  json += ",\"sample_count\":" + String(logger_->sampleCount());
-  json += ",\"psram_usage_percent\":" + String(logger_->usagePercent());
-  json += ",\"log_capacity\":" + String(logger_->sampleCapacity());
-  json += ",\"rwlog_downloadable\":\"" + String(logger_->rwlogDownloadable() ? "yes" : "no") + "\"";
+  json += ",\"remaining_s\":" + String(static_cast<float>(st.remaining_ms) / 1000.0f, 1);
+  json += ",\"rwlog_downloadable\":\"" +
+          String(logger_->rwlogDownloadable() ? "yes" : "no") + "\"";
   json += ",\"download_filename\":\"" + String(filename) + "\"";
-  json += ",\"run_id\":" + String(logger_->currentRunId());
-  json += ",\"run_start_us\":";
-  appendJsonUint64(json, logger_->runStartUs());
-  json += ",\"last_measurement_done\":\"" + String(logger_->lastMeasurementDone() ? "yes" : "no") + "\"";
-  json += ",\"calibration_sample_count\":" + String(st.calibration_sample_count);
-  json += ",\"startup\":" + imu_->startupDiagnosticsJson();
   json += ",\"imu_ok\":" + String(imu_->ok() ? "true" : "false");
   json += ",\"roller_ok\":" + String(roller_->ok() ? "true" : "false");
   json += ",\"roller_actual_current_mA\":" + String(roller.actual_current_mA);
-  json += ",\"roller_io_task_running\":" + String(roller.io_task_running ? "true" : "false");
-  json += ",\"roller_io_task_ready\":" + String(roller.io_task_ready ? "true" : "false");
-  json += ",\"roller_io_task_init_failed\":" + String(roller.io_task_init_failed ? "true" : "false");
-  json += ",\"roller_io_init_attempt_count\":" + String(roller.io_init_attempt_count);
-  json += ",\"roller_io_recovery_count\":" + String(roller.io_recovery_count);
-  json += ",\"roller_command_latency_us\":" + String(roller.last_command_latency_us);
-  json += ",\"roller_command_latency_max_us\":" + String(roller.max_command_latency_us);
   json += ",\"battery_mV\":" + String(roller.battery_mV);
-  json += ",\"loop_dt_us\":" + String(st.loop_dt_us);
-  json += ",\"log_dt_us\":" + String(st.log_dt_us);
-  json += ",\"imu_dt_us\":" + String(imu_->reading().update_dt_us);
-  json += ",\"last_error\":\"" + String(st.last_error && st.last_error[0] ? st.last_error : logger_->lastError()) + "\"";
+  json += ",\"last_error\":\"" +
+          String(st.last_error && st.last_error[0] ? st.last_error : logger_->lastError()) + "\"";
   json += "}";
 
-  // Arduino String renders non-finite floats as `nan`/`inf`, which is not valid
-  // JSON. V46 intentionally uses NaN for comparison series that are disabled
-  // during the autonomous run, so normalize those tokens before sending the
-  // status document. This lets the browser keep polling while its visible
-  // display remains frozen by design, then resume immediately at FINISHED.
+  // Keep the browser JSON valid if an estimator value is temporarily non-finite.
   json.replace(":-Infinity", ":null");
   json.replace(":Infinity", ":null");
   json.replace(":-inf", ":null");

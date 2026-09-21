@@ -6,9 +6,12 @@ from v46ab_no_prediction_contract import normalize_config as normalize_v46ab_con
 from v46aa_control_zero_contract import normalize_log_types as normalize_v46aa_log_types
 from v46z_comparison_zero_contract import normalize_log_types as normalize_v46z_log_types
 from v46ak_observation_contract import normalize_file as normalize_v46ak_file
+from v46al_control_contract import normalize_file as normalize_v46al_file
 ROOT=Path(__file__).resolve().parents[1]
 def original_timing_file(path):
     data=(ROOT/path).read_text()
+    # V46al-R1 is the declared active-control delta; remove it before retained hashes.
+    data=normalize_v46al_file(path, data)
     # V46ak is observation-only; remove it before checking the retained baseline.
     data=normalize_v46ak_file(path, data)
     if path == 'src/config.h':

@@ -58,9 +58,9 @@ for token in ('roller_ok', 'roller_actual_current_mA', 'battery_mV'):
 assert ('AtomS3R V46q MEKF Motor Validation' in manifest or
         'AtomS3R V46aj Fast Solver Motor Validation' in manifest or
         'AtomS3R V46ak Pre-Input State Observation' in manifest or
-        'AtomS3R V46al-R1 Previous-Peak Active Control' in manifest)
+        'AtomS3R V46al-R2 Previous-Peak Active Control' in manifest)
 assert ('"version": "0.46.16"' in manifest or '"version": "0.46.35"' in manifest or
-        '"version": "0.46.36"' in manifest or '"version": "0.46.41"' in manifest)
+        '"version": "0.46.36"' in manifest or '"version": "0.46.42"' in manifest)
 print('V46l/V46s dual-core Roller READY guards passed')
 
 # Initialization/recovery must be self-healing, not one-shot.

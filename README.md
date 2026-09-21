@@ -50,9 +50,9 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
-## 現在の開発版: V46al / 0.46.37
+## 現在の開発版: V46am / 0.46.38
 
-V46akで取得した5 Runを使い、**直前ピークによる次ピーク補正を実際のQ決定へ適用**する試験版です。
+V46alの直前ピーク実制御をそのまま維持し、**RWLOGダウンロードの安定性だけを改善**した版です。
 姿勢推定、3 ms補償、ZEROクロス判定、ピーク判定、Qゲイン、Ki、電流モデル、
 fast solver、300 mA・最大100 ms、ESTOPはV46aj/V46akから変更していません。
 
@@ -67,7 +67,7 @@ fast solver、300 mA・最大100 ms、ESTOPはV46aj/V46akから変更してい�
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現在は **V46al / 0.46.37** を書き込みます。
+現在は **V46am / 0.46.38** を書き込みます。V46alの制御内容はそのままで、RWLOGダウンロード経路のみ安定化しています。
 
 ---
 

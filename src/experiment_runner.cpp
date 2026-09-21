@@ -1,5 +1,6 @@
 #include "experiment_runner.h"
 #include "rate_baseline_correction.h"
+#include "previous_peak_control_correction.h"
 
 #include <math.h>
 
@@ -2769,7 +2770,18 @@ void ExperimentRunner::updateEnergyControlAutonomousAtZeroCross(uint32_t t_test_
   event.rate_baseline_peak_deg = baseline.rate_deg;  // raw formula, before zero floor
   event.rate_baseline_correction_deg = NAN;  // retired P1-difference column
   event.rate_baseline_reason = static_cast<uint8_t>(baseline.reason);
-  event.free_next_peak_amplitude_deg = baseline.adjusted_deg;
+  // V46al previous-peak active control begin
+  event.free_next_peak_before_previous_peak_correction_deg = baseline.adjusted_deg;
+  const auto previous_peak_result = previous_peak_control::evaluate(
+      baseline.adjusted_deg, event.previous_peak_amplitude_deg,
+      event.physical_next_peak_side, event.target_peak_deg, t_test_ms);
+  event.previous_peak_control_raw_correction_deg = previous_peak_result.raw_correction_deg;
+  event.previous_peak_control_correction_deg = previous_peak_result.applied_correction_deg;
+  event.previous_peak_control_reason = static_cast<uint8_t>(previous_peak_result.reason);
+  event.previous_peak_control_applied = previous_peak_result.applied;
+  event.previous_peak_control_clamped = previous_peak_result.clamped;
+  event.free_next_peak_amplitude_deg = previous_peak_result.corrected_free_peak_deg;
+  // V46al previous-peak active control end
   const uint32_t v46l_free_model_us = static_cast<uint32_t>(micros() - v46l_free_model_t0_us);
   // V46s audit begin
   audit.free_model_us = v46l_free_model_us;

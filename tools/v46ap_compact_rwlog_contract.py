@@ -45,16 +45,10 @@ static constexpr uint8_t BUFFER_WARNING_PERCENT = 90;"""
         text = text.replace(new, old)
         text = text.replace('static constexpr char RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921";\n', "")
     elif path == "src/log_types.h":
-        text = re.sub(
-            r"\n// V46ap: compact 2 ms pulse-only observation record\..*?"
-            r"static_assert\(sizeof\(PulseAuditSample\) == 26, \"PulseAuditSample binary size changed\"\);",
-            "",
-            text,
-            flags=re.S,
-        )
-        # The V46ap block also contains duplicate historical assertions; restore
-        # the original two-line tail if the regex removed them with the block.
-        if 'static_assert(sizeof(RwLogFileHeader) == 110' not in text:
-            text += '\nstatic_assert(sizeof(RwLogFileHeader) == 110, "RwLogFileHeader binary size changed");\n'
+        marker = "\n// V46ap: compact 2 ms pulse-only observation record."
+        pos = text.find(marker)
+        if pos >= 0:
+            text = text[:pos]
+            text += '\n\nstatic_assert(sizeof(RwLogFileHeader) == 110, "RwLogFileHeader binary size changed");\n'
             text += 'static_assert(sizeof(LogSample) == 258, "LogSample binary size changed");\n'
     return text

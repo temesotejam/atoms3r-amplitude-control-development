@@ -33,16 +33,6 @@ SAMPLE_FORMAT_V48 = SAMPLE_FORMAT_V47 + "hhI"
 SAMPLE_FORMAT_V49 = SAMPLE_FORMAT_V48
 # v50 adds lightweight 3 ms delay compensation; binary layout is unchanged.
 SAMPLE_FORMAT_V50 = SAMPLE_FORMAT_V49
-# v51 changes Autonomous amplitude/rate semantics, not the binary sample layout.
-SAMPLE_FORMAT_V51 = SAMPLE_FORMAT_V50
-# v52 is the dedicated 40-byte Autonomous amplitude-control sample.
-SAMPLE_FORMAT_V52 = "<IIIhhhhhHHHHBBbBBBhh"
-PULSE_AUDIT_FORMAT_V46AP = "<IIhhiIIBB"
-PULSE_AUDIT_COLUMNS_V46AP = [
-    "time_s", "pulse_id", "motor_cmd_mA", "actual_current_mA",
-    "wheel_speed_rpm", "current_age_us", "wheel_speed_age_us",
-    "current_valid", "wheel_speed_valid",
-]
 HEADER_FIELDS = [
     "magic",
     "format_version",
@@ -290,16 +280,6 @@ CSV_COLUMNS_V48 = CSV_COLUMNS_V47 + [
 ]
 CSV_COLUMNS_V49 = CSV_COLUMNS_V48
 CSV_COLUMNS_V50 = CSV_COLUMNS_V49
-CSV_COLUMNS_V51 = CSV_COLUMNS_V50
-CSV_COLUMNS_V52 = [
-    "time_s", "log_time_s", "t_test_ms", "pulse_id",
-    "pitch_mekf_measurement_relative_deg", "pitch_mekf_control_deg",
-    "gyro_pitch_rate_dps", "motor_cmd_mA", "roller_actual_current_mA",
-    "roller_battery_mV", "pulse_width_ms", "roller_current_age_us",
-    "imu_sample_age_us", "state_id", "pulse_active", "pulse_direction",
-    "sync_event_id", "roller_current_valid", "mekf_accel_used",
-    "mekf_accel_confidence", "mekf_accel_residual_deg",
-]
 CSV_COLUMNS_V33 = CSV_COLUMNS_COMMON_PREFIX + [
     "trial_predicted_beta_min", "beta_recovery_tau_s", "beta_model_vbat_mV", "predicted_i_goal_mA", "predicted_peak_current_mA", "beta_model_vbat_status",
     "beta_ceiling_fixed", "beta_ceiling_dynamic_hold073", "beta_ceiling_dynamic_hold120", "beta_ceiling_dynamic_hold170",
@@ -312,8 +292,6 @@ CSV_COLUMNS_V33 = CSV_COLUMNS_COMMON_PREFIX + [
     "beta_phase_state", "beta_phase_progress", "beta_phase_peak_angle_deg", "beta_phase_angle_deg", "beta_phase_ceiling",
 ]
 def csv_columns_for_version(format_version: int) -> list[str]:
-    if format_version >= 52:
-        return CSV_COLUMNS_V52
     if format_version >= 50:
         return CSV_COLUMNS_V50
     if format_version >= 49:
@@ -350,8 +328,6 @@ def csv_columns_for_version(format_version: int) -> list[str]:
 
 
 def sample_format_for_version(format_version: int) -> str:
-    if format_version >= 52:
-        return SAMPLE_FORMAT_V52
     if format_version >= 50:
         return SAMPLE_FORMAT_V50
     if format_version >= 49:
@@ -753,46 +729,7 @@ def convert_sample_v48(values):
     return row
 
 
-def convert_sample_v52(values):
-    (
-        time_us, t_test_ms, pulse_id,
-        pitch_mekf_measurement_relative_cdeg, pitch_mekf_control_cdeg,
-        gyro_pitch_rate_cdps, motor_cmd_mA, roller_actual_current_mA,
-        roller_battery_mV, pulse_width_ms, roller_current_age_us,
-        imu_sample_age_us, state_id, pulse_active, pulse_direction,
-        sync_event_id, roller_current_valid, mekf_accel_used,
-        mekf_accel_confidence_x10000, mekf_accel_residual_cdeg,
-    ) = values
-    def age(value):
-        return "" if value == 0xFFFF else value
-    return {
-        "time_s": f"{t_test_ms / 1000.0:.3f}",
-        "log_time_s": f"{time_us / 1000000.0:.6f}",
-        "t_test_ms": t_test_ms,
-        "pulse_id": pulse_id,
-        "pitch_mekf_measurement_relative_deg": f"{pitch_mekf_measurement_relative_cdeg / 100.0:.3f}",
-        "pitch_mekf_control_deg": f"{pitch_mekf_control_cdeg / 100.0:.3f}",
-        "gyro_pitch_rate_dps": f"{gyro_pitch_rate_cdps / 100.0:.3f}",
-        "motor_cmd_mA": motor_cmd_mA,
-        "roller_actual_current_mA": roller_actual_current_mA,
-        "roller_battery_mV": roller_battery_mV,
-        "pulse_width_ms": pulse_width_ms,
-        "roller_current_age_us": age(roller_current_age_us),
-        "imu_sample_age_us": age(imu_sample_age_us),
-        "state_id": state_id,
-        "pulse_active": pulse_active,
-        "pulse_direction": pulse_direction,
-        "sync_event_id": sync_event_id,
-        "roller_current_valid": roller_current_valid,
-        "mekf_accel_used": mekf_accel_used,
-        "mekf_accel_confidence": f"{mekf_accel_confidence_x10000 / 10000.0:.4f}",
-        "mekf_accel_residual_deg": f"{mekf_accel_residual_cdeg / 100.0:.3f}",
-    }
-
-
 def convert_sample(values, format_version: int):
-    if format_version >= 52:
-        return convert_sample_v52(values)
     if format_version >= 50:
         return convert_sample_v48(values)
     if format_version >= 49:
@@ -1044,12 +981,6 @@ ENERGY_CONTROL_AUTONOMOUS_ZERO_CROSS_COLUMNS = [
     "zero_cross_abs_rate_dps", "previous_peak_time_ms", "previous_peak_side",
     "previous_peak_amplitude_deg", "physical_next_peak_side", "phase",
     "free_next_peak_amplitude_deg", "free_model_revision", "passive_energy_j",
-    "p1_free_peak_before_rate_deg", "rate_baseline_peak_deg",
-    "rate_baseline_correction_deg", "rate_baseline_reason",
-    "free_next_peak_before_previous_peak_correction_deg",
-    "previous_peak_control_raw_correction_deg", "previous_peak_control_correction_deg",
-    "previous_peak_control_reason", "previous_peak_control_applied",
-    "previous_peak_control_clamped", "previous_peak_control_model_revision",
     "target_peak_deg", "target_energy_j", "delta_energy_required_j",
     "q1_gain_deg_per_mA_s", "q_ff_energy_mA_s", "q_angle_diagnostic_mA_s",
     "integral_side_mA_s", "q_unclamped_mA_s", "q_command_mA_s",
@@ -1058,11 +989,7 @@ ENERGY_CONTROL_AUTONOMOUS_ZERO_CROSS_COLUMNS = [
     "g_side_base_deg_per_mA_s", "g_side_corrected_deg_per_mA_s", "correction_blend_lambda",
     "predicted_next_peak_amplitude_deg", "q_saturated_upper", "q_saturated_lower",
     "q_command_direction", "command_matches_zero_cross_motion", "vbat_mV",
-    "i0_estimated_mA", "pre_input_capture_time_us", "pre_input_measured_current_mA",
-    "pre_input_current_sample_time_us", "pre_input_current_age_us", "pre_input_current_valid",
-    "pre_input_wheel_speed_rpm", "pre_input_wheel_speed_sample_time_us",
-    "pre_input_wheel_speed_age_us", "pre_input_wheel_speed_valid",
-    "solver_required_width_ms", "solver_selected_integer_width_ms",
+    "i0_estimated_mA", "solver_required_width_ms", "solver_selected_integer_width_ms",
     "command_current_mA", "pulse_width_ms", "pulse_start_ms", "pulse_end_ms",
     "output_executed", "valid", "reason", "reason_code",
 ]
@@ -1092,43 +1019,11 @@ def write_energy_control_autonomous_events(metadata: dict, out_dir: Path) -> tup
                     zero_count += 1
     return peak_count, zero_count
 
-def write_pulse_audit_samples(data: bytes, header: dict, out_dir: Path) -> int:
-    count = int(header.get("summary_count", 0))
-    if count <= 0:
-        return 0
-    expected = struct.calcsize(PULSE_AUDIT_FORMAT_V46AP)
-    if header.get("summary_row_size") != expected:
-        raise ValueError(f"unexpected pulse-audit summary row size {header.get('summary_row_size')} != {expected}")
-    start = int(header["summaries_offset"])
-    end = start + count * expected
-    if end > int(header["crc_offset"]) or end > len(data):
-        raise ValueError("pulse-audit summary section is truncated")
-    with (out_dir / "pulse_audit.csv").open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=PULSE_AUDIT_COLUMNS_V46AP)
-        writer.writeheader()
-        for i in range(count):
-            values = struct.unpack_from(PULSE_AUDIT_FORMAT_V46AP, data, start + i * expected)
-            (time_us, pulse_id, motor_cmd_mA, actual_current_mA, wheel_speed_x100_rpm,
-             current_age_us, wheel_speed_age_us, current_valid, wheel_speed_valid) = values
-            writer.writerow({
-                "time_s": f"{time_us / 1000000.0:.6f}",
-                "pulse_id": pulse_id,
-                "motor_cmd_mA": motor_cmd_mA,
-                "actual_current_mA": actual_current_mA,
-                "wheel_speed_rpm": "" if wheel_speed_x100_rpm == -2147483648 else f"{wheel_speed_x100_rpm / 100.0:.2f}",
-                "current_age_us": current_age_us,
-                "wheel_speed_age_us": wheel_speed_age_us,
-                "current_valid": current_valid,
-                "wheel_speed_valid": wheel_speed_valid,
-            })
-    return count
-
-
 def convert(path: Path, out_dir: Path) -> None:
     data = path.read_bytes()
     header = parse_header(data)
-    if header["format_version"] not in (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52):
-        raise ValueError(f"this converter expects rwlog format v23-v27, v29-v52, got v{header['format_version']}")
+    if header["format_version"] not in (23, 24, 25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50):
+        raise ValueError(f"this converter expects rwlog format v23-v27, v29-v50, got v{header['format_version']}")
     sample_format = sample_format_for_version(header["format_version"])
     if header["log_sample_size"] != struct.calcsize(sample_format):
         raise ValueError("unexpected sample size")
@@ -1160,12 +1055,8 @@ def convert(path: Path, out_dir: Path) -> None:
             values = struct.unpack_from(sample_format, data, offset)
             writer.writerow(convert_sample(values, header["format_version"]))
 
-    pulse_audit_count = write_pulse_audit_samples(data, header, out_dir)
-
     print(f"format_version={header['format_version']}")
     print(f"samples={header['sample_count']}")
-    if pulse_audit_count:
-        print(f"pulse_audit_samples={pulse_audit_count}")
     print(f"crc_ok={crc_ok}")
     if e2_shadow_peak_count:
         print(f"e2_shadow_peak_events={e2_shadow_peak_count}")
@@ -1183,7 +1074,7 @@ def convert(path: Path, out_dir: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Convert supported RWLOG v23-v52 files to CSV, including control and diagnostic metadata events.")
+    parser = argparse.ArgumentParser(description="Convert supported RWLOG v23-v50 files to CSV, including control and diagnostic metadata events.")
     parser.add_argument("rwlog", type=Path)
     parser.add_argument("--out", type=Path, default=Path("converted_dynamic_beta_hold73_tau73_compare"))
     args = parser.parse_args()

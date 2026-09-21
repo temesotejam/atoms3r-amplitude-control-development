@@ -6,6 +6,7 @@
 #include "beta_phase_controller.h"
 #include "beta_turn_fast_controller.h"
 #include "config.h"
+#include "autonomous_timing_compensation.h"
 #include "imu_manager.h"
 #include "log_types.h"
 #include "mekf6.hpp"
@@ -61,8 +62,9 @@ struct ExperimentStatus {
   float mekf_start_sync_zero_abs_deg = NAN;
   float mekf_measurement_zero_abs_deg = NAN;
   float mekf_trial_zero_abs_deg = NAN;
-  // Autonomous zero-cross timing: measurement-relative posterior MEKF plus
-  // the run's delay projection. Peak amplitude uses the unprojected posterior.
+  // V46ab control timing coordinate: posterior MEKF angle relative to the
+  // measurement-start posterior angle (initial upright pose). This is identical
+  // to pitch_mekf_measurement_relative_deg during Autonomous control.
   float pitch_mekf_detector_relative_deg = NAN;
   // Retained V46aa prediction-reference diagnostics only; not used by V46ab control.
   float mekf_detector_zero_predicted_abs_deg = NAN;
@@ -152,6 +154,9 @@ public:
   bool startEnergyControlV0Capture();
   bool startEnergyControlAutonomousCapture();
   bool setEnergyControlAutonomousTarget(float target_deg);
+  bool setEnergyControlAutonomousTimingCompensation(uint32_t value_us);
+  uint32_t energyControlAutonomousTimingCompensationUs() const { return autonomous_timing_.selectedUs(); }
+  uint32_t energyControlAutonomousRunTimingCompensationUs() const { return autonomous_timing_.runUs(); }
   void zeroAngleNow();
   bool zeroCurrentRollDisplay();
   bool setCurrentRollTarget(float target_deg);
@@ -378,7 +383,7 @@ private:
   void beginEnergyControlAutonomousStartKick(uint32_t now_ms);
   void updateEnergyControlAutonomousMotion(uint32_t now_ms);
   void updateEnergyControlAutonomousPeakTracker(uint32_t now_ms,
-                                                float peak_relative_angle_deg,
+                                                float detector_relative_angle_deg,
                                                 float rate_dps);
   bool recordEnergyControlAutonomousPeak(uint32_t peak_ms, int8_t physical_side,
                                          float amplitude_deg, float detector_peak_angle_deg);
@@ -393,7 +398,7 @@ private:
                                          int8_t direction, uint16_t pulse_width_ms);
   bool beginEnergyControlAutonomousStartKickPulse(uint32_t now_ms, int8_t direction);
   float energyControlPotentialJ(float amplitude_deg) const;
-  // V46ai: no previous-amplitude free-peak method.
+  float energyControlAutonomousFreeNextPeakAmplitude(float amplitude_deg) const;
   float energyControlAutonomousGainForSide(int8_t physical_side) const;
   void energyControlAutonomousCorrectionParameters(int8_t physical_side,
                                                     float* c_side_used_deg,
@@ -441,7 +446,6 @@ private:
   uint32_t last_imu_update_us_ = 0;  // V46g: last consumed gyro sequence
   uint32_t last_mekf_accel_sequence_ = 0;
   uint32_t last_log_us_ = 0;
-  uint32_t last_pulse_audit_us_ = 0;
   uint32_t static_rate_since_ms_ = 0;
   float display_zero_offset_deg_ = 0.0f;
   float target_roll_deg_ = 0.0f;
@@ -499,11 +503,16 @@ private:
   EnergyControlAutonomousHalfCycleState energy_control_autonomous_half_cycle_state_ =
       EnergyControlAutonomousHalfCycleState::WAIT_PEAK;
   float energy_control_autonomous_target_peak_deg_ = Config::ENERGY_CONTROL_AUTONOMOUS_DEFAULT_TARGET_PEAK_DEG;
+  autonomous_timing::Selection autonomous_timing_{Config::ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US};
   float energy_control_autonomous_integral_plus_mA_s_ = 0.0f;
   float energy_control_autonomous_integral_minus_mA_s_ = 0.0f;
-  // V46ae: one MEKF state supplies peak amplitude and zero-cross timing.
-  // Repeated delivery of a gyro sample cannot count as another return sample.
-  uint32_t energy_control_autonomous_last_motion_sample_us_ = 0;
+  bool energy_control_autonomous_gyro_integrator_ready_ = false;
+  uint32_t energy_control_autonomous_last_gyro_sample_us_ = 0;
+  float energy_control_autonomous_last_gyro_rate_dps_ = 0.0f;
+  float energy_control_autonomous_gyro_relative_deg_ = 0.0f;
+  // MEKF detector detects timing only. V46ab uses the posterior
+  // measurement-relative MEKF coordinate directly. It is never the
+  // energy/peak-amplitude coordinate.
   bool energy_control_autonomous_detector_has_previous_angle_ = false;
   float energy_control_autonomous_detector_zero_angle_deg_ = 0.0f;  // legacy retained for layout/source compatibility; not used by detector.
   float energy_control_autonomous_previous_detector_relative_angle_deg_ = 0.0f;

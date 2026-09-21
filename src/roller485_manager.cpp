@@ -11,8 +11,6 @@ static constexpr uint8_t REG_ERROR_CODE = 0x0D;
 static constexpr uint8_t REG_VIN = 0x34;
 static constexpr uint8_t REG_CURRENT = 0xB0;
 static constexpr uint8_t REG_CURRENT_READBACK = 0xC0;
-// M5Stack Unit Roller485 I2C protocol: Speed Readback X100 Int at 0x60.
-static constexpr uint8_t REG_SPEED_READBACK = 0x60;
 
 bool Roller485Manager::begin() {
   // V46j: do not touch Wire from the Arduino/control core. Core 0 will own the
@@ -235,15 +233,6 @@ void Roller485Manager::update() {
   // If the fast audit already obtained a valid current in this same loop,
   // reuse it instead of immediately reading CURRENT_READBACK a second time.
   bool ok = current_already_fresh || readCurrentFresh(command_mA_ != 0);
-
-  // V46ak: speed is observation-only. Read it only while no current command is
-  // active or pending, so this extra I2C transaction never joins the active
-  // pulse current-audit path. Failure does not change roller_ok or authorize/
-  // block control; the sample is simply marked invalid.
-  if (command_mA_ == 0 && requested_current_mA_ == 0) {
-    readSpeedFresh();
-  }
-
   ok &= readI32(REG_VIN, vin_raw);
   ok &= readU8(REG_MODE, mode);
   ok &= readU8(REG_OUTPUT, output);
@@ -417,24 +406,6 @@ void Roller485Manager::recordCurrentReadFailure(bool audit_sample) {
     current_audit_read_failed_ = true;
     telemetry_.q_meas_observed_valid = false;
   }
-}
-
-bool Roller485Manager::readSpeedFresh() {
-  int32_t speed_raw_x100 = 0;
-  ++telemetry_.speed_sequence;
-  if (!readI32(REG_SPEED_READBACK, speed_raw_x100)) {
-    recordSpeedReadFailure();
-    return false;
-  }
-  telemetry_.speed_rpm = static_cast<float>(speed_raw_x100) / 100.0f;
-  telemetry_.speed_sample_time_us = micros();
-  telemetry_.speed_valid = true;
-  return true;
-}
-
-void Roller485Manager::recordSpeedReadFailure() {
-  telemetry_.speed_valid = false;
-  ++telemetry_.speed_read_failure_count;
 }
 
 void Roller485Manager::beginCurrentAuditPulse() {

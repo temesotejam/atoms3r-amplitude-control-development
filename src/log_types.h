@@ -163,54 +163,5 @@ struct LogSample {
 };
 #pragma pack(pop)
 
-// V46as: current Autonomous amplitude-control time series only.
-// This intentionally drops historical estimator/debug arrays from the 50 Hz
-// stream. Control decisions and pre-input observations remain in the compact
-// Autonomous metadata events, while 2 ms actuator telemetry remains in
-// PulseAuditSample below.
-#pragma pack(push, 1)
-struct AutonomousCompactSample {
-  uint32_t time_us;
-  uint32_t t_test_ms;
-  uint32_t pulse_id;
-  int16_t pitch_mekf_measurement_relative_cdeg;
-  int16_t pitch_mekf_control_cdeg;
-  int16_t gyro_pitch_rate_cdps;
-  int16_t motor_cmd_mA;
-  int16_t roller_actual_current_mA;
-  uint16_t roller_battery_mV;
-  uint16_t pulse_width_ms;
-  uint16_t roller_current_age_us;
-  uint16_t imu_sample_age_us;
-  uint8_t state_id;
-  uint8_t pulse_active;
-  int8_t pulse_direction;
-  uint8_t sync_event_id;
-  uint8_t roller_current_valid;
-  uint8_t mekf_accel_used;
-  int16_t mekf_accel_confidence_x10000;
-  int16_t mekf_accel_residual_cdeg;
-};
-#pragma pack(pop)
-
-// V46ap: compact 2 ms pulse-only observation record. These rows are written to
-// the RWLOG header's summary section; the existing 258-byte LogSample stays
-// byte-for-byte compatible and returns to its normal 20 ms cadence.
-#pragma pack(push, 1)
-struct PulseAuditSample {
-  uint32_t time_us;
-  uint32_t pulse_id;
-  int16_t motor_cmd_mA;
-  int16_t actual_current_mA;
-  int32_t wheel_speed_x100_rpm;
-  uint32_t current_age_us;
-  uint32_t wheel_speed_age_us;
-  uint8_t current_valid;
-  uint8_t wheel_speed_valid;
-};
-#pragma pack(pop)
-
 static_assert(sizeof(RwLogFileHeader) == 110, "RwLogFileHeader binary size changed");
 static_assert(sizeof(LogSample) == 258, "LogSample binary size changed");
-static_assert(sizeof(AutonomousCompactSample) == 40, "AutonomousCompactSample binary size changed");
-static_assert(sizeof(PulseAuditSample) == 26, "PulseAuditSample binary size changed");

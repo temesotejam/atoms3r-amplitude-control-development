@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify V46as compact-v52 delta and retained control/safety envelope
+      - name: Verify V46at partial-write-safe delta and retained control/safety envelope
         run: |
           set -euxo pipefail
           python tools/test_v46u_timing.py
@@ -42,6 +42,7 @@ jobs:
           python tools/test_v46aq_restored_download.py
           python tools/test_v46ar_prepared_rwlog.py
           python tools/test_v46as_autonomous_compact_v52.py
+          python tools/test_v46at_partial_write_safe.py
       - name: Run retained native acquisition, startup, control and MEKF tests
         run: |
           set -euxo pipefail
@@ -56,7 +57,7 @@ jobs:
           python -m json.tool site/manifest.json >/dev/null
       - name: Install PlatformIO
         run: pip install platformio
-      - name: Build V46as firmware with 40-byte autonomous v52
+      - name: Build V46at firmware with partial-write-safe v52 download
         run: |
           set -euxo pipefail
           pio pkg install -e atoms3cam
@@ -72,12 +73,12 @@ jobs:
           cp bmi270-build-patch.json dist/
           python "$HOME/.platformio/packages/tool-esptoolpy/esptool.py" --chip esp32s3 merge_bin -o dist/merged-firmware.bin 0x0000 dist/bootloader.bin 0x8000 dist/partitions.bin 0xe000 dist/boot_app0.bin 0x10000 dist/firmware.bin
           printf '%s\n' "$GITHUB_SHA" > dist/build-sha.txt
-          printf '%s\n' 'V46as 0.46.44; V46al previous-peak control retained unchanged; V46aj attitude and 3ms zero-cross timing retained; Autonomous primary timeseries is 40-byte RWLOG v52 at 50Hz; 26-byte 2ms Pulse Audit retained; metadata/header/CRC prepared before download; V46al 4096-byte direct stream retained' > dist/FLASH_LAYOUT.txt
+          printf '%s\n' 'V46at 0.46.45; V46al previous-peak control retained unchanged; V46aj attitude and 3ms zero-cross timing retained; V46as 40-byte RWLOG v52 and 26-byte 2ms Pulse Audit retained; metadata/header/CRC prepared before download; single HTTP 200 stream uses 1460-byte partial-write-safe retries; no Range/native hold' > dist/FLASH_LAYOUT.txt
           (cd dist && sha256sum *.bin > SHA256SUMS.txt)
           git diff --exit-code
       - uses: actions/upload-artifact@v4
         with:
-          name: atoms3r-v46as-${{ github.sha }}
+          name: atoms3r-v46at-${{ github.sha }}
           path: dist/
           if-no-files-found: error
           retention-days: 30

@@ -14,17 +14,21 @@ for(const match of html.matchAll(/<(\w+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)){
 }
 const get=id=>{assert(elements.has(id),'Missing DOM element: '+id);return elements.get(id);};
 const isDisabled=e=>e.tagName==='A'?e.classList.contains('disabled'):e.disabled;
-for(const id of ['summary','startupInfo','errorInfo','energyTarget','energy','stop','rwlog','resumeDownload','clear'])get(id);
+for(const id of ['summary','startupInfo','errorInfo','energyTarget','energy','stop','rwlog','clear'])get(id);
 for(const removed of ['passive','shadowTarget','zero','target','abs','current','rate','targetError'])assert(!elements.has(removed),removed);
-assert(html.includes('V46ao / 0.46.40')||html.includes('V46ap / 0.46.41'));
+assert(html.includes('V46ao / 0.46.40')||html.includes('V46ap / 0.46.41')||html.includes('V46aq / 0.46.42'));
 assert(html.includes('ZEROクロス補償3 ms固定'));
 assert(!html.includes('Q1 direct next-peak shadow'));
 assert(!html.includes('Passive release capture'));
 assert(html.includes('href="/download/rwlog"'));
-assert(html.includes('download onclick="return beginNativeRwlogDownload()"'));
+assert(html.includes('href="/download/rwlog" onclick="beginDownload()"'));
+assert(!html.includes('download onclick="return beginNativeRwlogDownload()"'));
 assert(!source.includes("fetch('/download/rwlog'"));
 assert(source.includes("if(refreshInFlight||downloading)return;"));
-assert(source.includes('resumeUiAfterDownload'));
+assert(source.includes('function beginDownload()'));
+assert(source.includes('setTimeout(()=>{downloading=false;refresh();},3000)'));
+assert(!source.includes('beginNativeRwlogDownload'));
+assert(!source.includes('resumeUiAfterDownload'));
 
 const context=vm.createContext({
   document:{getElementById:get,activeElement:null},
@@ -49,7 +53,6 @@ const ready={
   assert(get('energy').disabled);
   await replyJson(requests.shift(),ready);
   assert(!get('energy').disabled);assert(!isDisabled(get('rwlog')));assert(get('stop').disabled);
-  assert(get('resumeDownload').hidden);
 
   // Stale status must not unlock a concurrent start.
   run('refresh()');const stale=requests.shift();
@@ -68,23 +71,18 @@ const ready={
   await replyJson(stop,'ok');await replyJson(requests.shift(),ready);
   assert(!get('energy').disabled);
 
-  // Native download begins directly; no fetch request is created by JS.
+  // V46aq restores the V46al plain-anchor download; JS creates no fetch request.
   const before=requests.length;
-  assert.strictEqual(run('beginNativeRwlogDownload()'),true);
+  assert.strictEqual(run('beginDownload()'),true);
   assert.strictEqual(requests.length,before);
-  assert.strictEqual(get('resumeDownload').hidden,false);
-  assert.strictEqual(get('rwlog').textContent,'RWLOG download active');
   assert(isDisabled(get('rwlog')));
-
-  // No status polling resumes by itself while the download hold is active.
   run('refresh()');assert.strictEqual(requests.length,before);
 
-  // Explicit resume re-enables status traffic after the browser download is done.
-  run('resumeUiAfterDownload()');
-  assert.strictEqual(get('resumeDownload').hidden,true);
+  // The historical V46al behavior resumes normal UI polling after a short local hold.
+  run('downloading=false;refresh()');
   const postDownloadStatus=requests.shift();assert(postDownloadStatus&&postDownloadStatus.url==='/status.json');
   await replyJson(postDownloadStatus,ready);
   assert(!isDisabled(get('rwlog')));
 
-  console.log('V46ao minimal UI PASS: native RWLOG download retained; polling stays paused until explicit resume');
+  console.log('V46aq minimal UI PASS: V46al plain-anchor RWLOG download restored');
 })().catch(error=>{console.error(error);process.exitCode=1;});

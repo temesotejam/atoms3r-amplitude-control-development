@@ -413,6 +413,9 @@ String PsramLogger::buildMetadataJson() const {
   json += "\"firmware_revision\":\"" + String(Config::PASSIVE_CAPTURE_FIRMWARE_REVISION) + "\",";
   json += "\"attitude_validation_revision\":\"" + String(Config::ATTITUDE_VALIDATION_REVISION) + "\",";
   json += "\"amplitude_control_observation_revision\":\"" + String(Config::AMPLITUDE_CONTROL_OBSERVATION_REVISION) + "\",";
+  json += "\"amplitude_control_revision\":\"" + String(Config::AMPLITUDE_CONTROL_REVISION) + "\",";
+  json += "\"previous_peak_control_model_revision\":\"" + String(Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION) + "\",";
+  json += "\"previous_peak_control_semantics\":\"8deg_only_after_10s_and_within_side_specific_previous_peak_support;affine_residual_correction_c_plus_k_times_prev_minus_8;bounded_to_plusminus_0p70deg;changes_free_peak_before_existing_energy_solver;q_gain_Ki_current_model_and_safety_unchanged\",";
   json += "\"v46ak_pre_input_observation_semantics\":\"latest_independent_coast_current_and_speed_snapshots_captured_before_solver_and_command;speed_readback_register_0x60_x100_rpm;observation_only_never_read_by_control\",";
   json += "\"measurement_mode\":\"" + String(energy_control_autonomous_mode_ ? Config::ENERGY_CONTROL_AUTONOMOUS_MEASUREMENT_MODE :
       (energy_control_v0_mode_ ? Config::ENERGY_CONTROL_V0_MEASUREMENT_MODE :
@@ -1530,6 +1533,19 @@ String PsramLogger::buildMetadataJson() const {
     appendAutonomousNullable("rate_baseline_peak_deg", e.rate_baseline_peak_deg, 5);
     appendAutonomousNullable("rate_baseline_correction_deg", e.rate_baseline_correction_deg, 5);
     detail += ",\"rate_baseline_reason\":" + String(e.rate_baseline_reason);
+    appendAutonomousNullable("free_next_peak_before_previous_peak_correction_deg",
+                             e.free_next_peak_before_previous_peak_correction_deg, 5);
+    appendAutonomousNullable("previous_peak_control_raw_correction_deg",
+                             e.previous_peak_control_raw_correction_deg, 5);
+    appendAutonomousNullable("previous_peak_control_correction_deg",
+                             e.previous_peak_control_correction_deg, 5);
+    detail += ",\"previous_peak_control_reason\":" + String(e.previous_peak_control_reason);
+    detail += ",\"previous_peak_control_applied\":" +
+        String(e.previous_peak_control_applied ? "true" : "false");
+    detail += ",\"previous_peak_control_clamped\":" +
+        String(e.previous_peak_control_clamped ? "true" : "false");
+    detail += ",\"previous_peak_control_model_revision\":\"" +
+        String(Config::ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION) + "\"";
     detail += ",\"free_model_revision\":\"" + String(Config::ENERGY_CONTROL_AUTONOMOUS_FREE_MODEL_REVISION) + "\"";
     appendAutonomousNullable("passive_energy_j", e.passive_energy_j, 8);
     appendAutonomousNullable("target_peak_deg", e.target_peak_deg, 5);

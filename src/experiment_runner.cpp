@@ -1121,6 +1121,7 @@ void ExperimentRunner::beginStartSync(uint32_t now_ms) {
                     q_ident_mode_ ? static_cast<uint8_t>(q_ident_run_schedule_id_ + 1) : 0,
                      energy_control_v0_mode_, energy_control_autonomous_mode_);
   last_log_us_ = 0;
+  last_pulse_audit_us_ = 0;
   status_.state = ExperimentState::START_SYNC;
   status_.sync_event_id = 1;
   sync_step_ = 0;
@@ -5685,23 +5686,48 @@ uint16_t ExperimentRunner::betaHoldAfterInputMsForStrategy(uint8_t index) const 
 }
 void ExperimentRunner::logSampleIfDue() {
   const uint32_t now_us = micros();
-  // Preserve the normal 20 ms time series. While an already-authorized pulse
-  // is live, add rows at the current-audit period so fresh-read gaps can be
-  // evaluated offline. Logging rate cannot alter the motor command.
-  const uint32_t period_us = status_.pulse_active
-      ? Config::CURRENT_AUDIT_LOG_PERIOD_US : Config::LOG_PERIOD_MS * 1000UL;
-  if (last_log_us_ != 0 && static_cast<uint32_t>(now_us - last_log_us_) < period_us) return;
-  const bool probe_log = timing_probe_pending_ && !timing_probe_log_captured_ &&
-      status_.pulse_active && status_.pulse_id == timing_probe_event_.pulse_id;
-  const uint32_t log_start_us = probe_log ? micros() : 0;
-  logSampleNow();
-  if (probe_log) {
-    timing_probe_event_.first_audit_log_offset_us =
-        static_cast<uint32_t>(log_start_us - timing_probe_event_.pulse_start_us);
-    timing_probe_event_.first_audit_log_us = static_cast<uint32_t>(micros() - log_start_us);
-    timing_probe_log_captured_ = true;
-    maybeFinalizeTimingProbe();
+
+  // V46ap: keep the expensive 258-byte full row at 50 Hz. During a motor pulse,
+  // capture only current/command/wheel state in the compact 26-byte summary row
+  // at 2 ms. This preserves the current-audit observation without multiplying
+  // the complete estimator/debug payload by ten.
+  if (status_.pulse_active &&
+      (last_pulse_audit_us_ == 0 ||
+       static_cast<uint32_t>(now_us - last_pulse_audit_us_) >= Config::CURRENT_AUDIT_LOG_PERIOD_US)) {
+    const bool probe_log = timing_probe_pending_ && !timing_probe_log_captured_ &&
+        status_.pulse_id == timing_probe_event_.pulse_id;
+    const uint32_t audit_start_us = probe_log ? micros() : 0;
+    const RollerTelemetry roller_telemetry = roller_ ? roller_->telemetrySnapshot() : RollerTelemetry{};
+    PulseAuditSample audit{};
+    audit.time_us = static_cast<uint32_t>(now_us - run_start_us_);
+    audit.pulse_id = status_.pulse_id;
+    audit.motor_cmd_mA = status_.motor_cmd_mA;
+    audit.actual_current_mA = roller_telemetry.actual_current_mA;
+    audit.wheel_speed_x100_rpm = isfinite(roller_telemetry.speed_rpm)
+        ? static_cast<int32_t>(lroundf(roller_telemetry.speed_rpm * 100.0f)) : LOG_NAN_I32;
+    audit.current_age_us = roller_telemetry.current_sample_time_us == 0
+        ? UINT32_MAX : static_cast<uint32_t>(now_us - roller_telemetry.current_sample_time_us);
+    audit.wheel_speed_age_us = roller_telemetry.speed_sample_time_us == 0
+        ? UINT32_MAX : static_cast<uint32_t>(now_us - roller_telemetry.speed_sample_time_us);
+    audit.current_valid = roller_telemetry.current_valid ? 1 : 0;
+    audit.wheel_speed_valid = roller_telemetry.speed_valid ? 1 : 0;
+    if (!logger_->addPulseAuditSample(audit)) {
+      requestEmergencyStop("pulse_audit_buffer_full");
+      return;
+    }
+    last_pulse_audit_us_ = now_us;
+    if (probe_log) {
+      timing_probe_event_.first_audit_log_offset_us =
+          static_cast<uint32_t>(audit_start_us - timing_probe_event_.pulse_start_us);
+      timing_probe_event_.first_audit_log_us = static_cast<uint32_t>(micros() - audit_start_us);
+      timing_probe_log_captured_ = true;
+      maybeFinalizeTimingProbe();
+    }
   }
+
+  if (last_log_us_ != 0 &&
+      static_cast<uint32_t>(now_us - last_log_us_) < Config::LOG_PERIOD_MS * 1000UL) return;
+  logSampleNow();
 }
 
 void ExperimentRunner::logSampleNow() {

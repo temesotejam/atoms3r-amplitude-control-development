@@ -11,7 +11,8 @@ manifest=json.loads((R/'site/manifest.json').read_text())
 site=(R/'site/index.html').read_text()
 
 assert 'RWLOG_DOWNLOAD_REVISION[] = "v46ar_prepared_rwlog_download_20260921"' in config
-assert 'RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config
+assert ('RWLOG_STORAGE_REVISION[] = "v46ap_compact_rwlog_20260921"' in config or
+        'RWLOG_STORAGE_REVISION[] = "v46as_autonomous_compact_v52_20260921"' in config)
 
 for token in (
     'bool prepareRwLog();',
@@ -65,9 +66,9 @@ assert 'rwlog_stream_transport' not in logger
 assert 'beginNativeRwlogDownload' not in web
 assert 'resumeUiAfterDownload' not in web
 
-assert manifest['version']=='0.46.43'
-assert 'V46ar' in manifest['name']
-assert 'V46ar / 0.46.43' in site
+assert manifest['version'] in ('0.46.43','0.46.44')
+assert 'V46ar' in manifest['name'] or 'V46as' in manifest['name']
+assert 'V46ar / 0.46.43' in site or 'V46as / 0.46.44' in site
 
 for token in (
     'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"',

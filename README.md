@@ -50,15 +50,16 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
-## 現在の開発版: V46ar / 0.46.43
+## 現在の開発版: V46as / 0.46.44
 
-V46apのcompact RWLOGとV46aqのV46al 4096 byte直接送信を維持し、**Download要求前にmetadataとCRCを事前計算**する版です。
-DownloadボタンはRWLOG準備が成功してから有効になります。WebUIには準備状態、metadata/総byte数、metadata生成時間、CRC時間を表示します。
-制御・姿勢推定・3 ms補償・安全上限は変更していません。
+現在の8°・30秒Autonomous測定専用に、従来の258 byte汎用時系列を**40 byte/行のRWLOG v52**へ置き換えた版です。
+50 Hz×30秒の主時系列は約60 kBです。2 ms Pulse Audit、ZEROクロス/ピーク、previous peak補正、Q、pre-input電流・ホイール速度は維持します。
+V46arの事前metadata/CRC生成とV46aqの4096 byte直接送信も維持し、制御・姿勢推定・3 ms補償・安全上限は変更していません。
 
 補正は **target 8°・10秒以降・直前ピークが学習済み範囲内**のときだけ有効で、
 補正量は最大 **±0.70°** です。条件外ではV46akのrate-only制御へ自動的に戻ります。
 
+- [V46asのAutonomous compact v52](docs/V46AS_AUTONOMOUS_COMPACT_V52.md)
 - [V46arの事前RWLOG準備](docs/V46AR_PREPARED_RWLOG.md)
 - [V46aqのV46alダウンロード復元](docs/V46AQ_V46AL_DOWNLOAD_RESTORE.md)
 - [V46apのRWLOG軽量化](docs/V46AP_COMPACT_RWLOG.md)
@@ -73,7 +74,7 @@ DownloadボタンはRWLOG準備が成功してから有効になります。WebU
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現在は **V46ar / 0.46.43** を書き込みます。RWLOGは測定終了後にmetadataとCRCまで事前準備し、準備完了後はV46alの4096 byte直接送信でダウンロードします。
+現在は **V46as / 0.46.44** を書き込みます。Autonomousの主時系列は40 byte/50 Hzのv52で、測定終了後にmetadataとCRCを事前準備し、V46alの4096 byte直接送信でダウンロードします。
 
 ---
 

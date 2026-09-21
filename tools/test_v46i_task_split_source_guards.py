@@ -56,9 +56,10 @@ assert 'roller_command_latency_max_us' in web
 assert ('AtomS3R V46q MEKF Motor Validation' in manifest or
         'AtomS3R V46aj Fast Solver Motor Validation' in manifest or
         'AtomS3R V46ak Pre-Input State Observation' in manifest or
-        'AtomS3R V46al Previous-Peak Active Control' in manifest)
+        'AtomS3R V46al Previous-Peak Active Control' in manifest or
+        'AtomS3R V46am RWLOG Download Stability' in manifest)
 assert ('"version": "0.46.16"' in manifest or '"version": "0.46.35"' in manifest or
-        '"version": "0.46.36"' in manifest or '"version": "0.46.37"' in manifest)
+        '"version": "0.46.36"' in manifest or '"version": "0.46.37"' in manifest or '"version": "0.46.38"' in manifest)
 print('V46l/V46s dual-core Roller READY guards passed')
 
 # Initialization/recovery must be self-healing, not one-shot.

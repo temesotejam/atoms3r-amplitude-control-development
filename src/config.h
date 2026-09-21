@@ -123,8 +123,10 @@ static constexpr char PASSIVE_CAPTURE_FIRMWARE_REVISION[] = "energy_control_auto
 static constexpr char ATTITUDE_VALIDATION_REVISION[] = "v46aj_fixed_3ms_compensation_20260920";
 // V46ak changes observation only. ATTITUDE_VALIDATION_REVISION intentionally remains V46aj.
 static constexpr char AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920";
-// V46al previous-peak active control begin
-static constexpr char AMPLITUDE_CONTROL_REVISION[] = "v46alr1_previous_peak_active_control_from_v46ak_stable_20260921";\nstatic constexpr char AMPLITUDE_CONTROL_BASELINE_SOURCE[] =\n    "atoms3r-amplitude-control-v46ak-stable@bb9c5ed07c5ca8b3c6c6b5813b6c2f1b1f57a6ec";
+// V46al-R1 previous-peak active control begin
+static constexpr char AMPLITUDE_CONTROL_REVISION[] = "v46alr1_previous_peak_active_control_from_v46ak_stable_20260921";
+static constexpr char AMPLITUDE_CONTROL_BASELINE_SOURCE[] =
+    "atoms3r-amplitude-control-v46ak-stable@bb9c5ed07c5ca8b3c6c6b5813b6c2f1b1f57a6ec";
 static constexpr char ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MODEL_REVISION[] =
     "V46AK_5RUN_8DEG_10TO30S_PREV_RESIDUAL_20260921";
 static constexpr bool ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_CONTROL_ENABLED = true;
@@ -142,7 +144,7 @@ static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_C_AT_8_DEG 
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_K_PER_DEG = 0.585367534f;
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MIN_DEG = 6.95706f;
 static constexpr float ENERGY_CONTROL_AUTONOMOUS_PREVIOUS_PEAK_MINUS_SUPPORT_MAX_DEG = 8.75588f;
-// V46al previous-peak active control end
+// V46al-R1 previous-peak active control end
 static constexpr float MEKF_GYRO_Y_SCALE = 0.908911f;
 static constexpr uint32_t PASSIVE_CAPTURE_DURATION_MS = 60000UL;
 static constexpr uint32_t PASSIVE_STATIC_WINDOW_MS = 3000UL;

@@ -11,8 +11,8 @@ manifest = json.loads((R / 'site/manifest.json').read_text(encoding='utf-8'))
 site = (R / 'site/index.html').read_text(encoding='utf-8')
 
 assert 'v46aj_fixed_3ms_compensation_20260920' in config
-assert manifest['version'] == '0.46.36'
-assert 'V46ak' in manifest['name']
+assert manifest['version'] == '0.46.41'
+assert 'V46al-R1' in manifest['name']\nassert 'V46al-R1 / 0.46.41' in site
 assert 'V46ak / 0.46.36' in site
 
 # Physical output envelope and safety limits remain unchanged.

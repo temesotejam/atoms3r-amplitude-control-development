@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify V46an native-download delta and retained V46aj/V46ak/V46al/V46am envelope
+      - name: Verify V46ao Range-resume delta and retained V46aj/V46ak/V46al/V46am/V46an envelope
         run: |
           set -euxo pipefail
           python tools/test_v46u_timing.py
@@ -40,6 +40,7 @@ jobs:
           python tools/test_v46al_previous_peak_control.py
           python tools/test_v46am_rwlog_download.py
           python tools/test_v46an_native_download.py
+          python tools/test_v46ao_http_range_resume.py
       - name: Run retained native acquisition, startup, control and MEKF tests
         run: |
           set -euxo pipefail
@@ -54,7 +55,7 @@ jobs:
           python -m json.tool site/manifest.json >/dev/null
       - name: Install PlatformIO
         run: pip install platformio
-      - name: Build V46an firmware with V46al control and native RWLOG download
+      - name: Build V46ao firmware with V46al control and resumable RWLOG download
         run: |
           set -euxo pipefail
           pio pkg install -e atoms3cam
@@ -70,12 +71,12 @@ jobs:
           cp bmi270-build-patch.json dist/
           python "$HOME/.platformio/packages/tool-esptoolpy/esptool.py" --chip esp32s3 merge_bin -o dist/merged-firmware.bin 0x0000 dist/bootloader.bin 0x8000 dist/partitions.bin 0xe000 dist/boot_app0.bin 0x10000 dist/firmware.bin
           printf '%s\n' "$GITHUB_SHA" > dist/build-sha.txt
-          printf '%s\n' 'V46an 0.46.39; V46al previous-peak control retained unchanged; V46aj attitude and 3ms zero-cross timing retained; V46ak observations retained; V46am partial-write-tolerant 1460-byte server transport retained; browser uses native href download and status polling remains paused until explicit Resume UI; device UI remains minimal; RWLOG sample layout remains v51' > dist/FLASH_LAYOUT.txt
+          printf '%s\n' 'V46ao 0.46.40; V46al previous-peak control retained unchanged; V46aj attitude and 3ms zero-cross timing retained; V46ak observations retained; V46am partial-write-tolerant 1460-byte transport and V46an native download retained; HTTP Range bytes requests return 206 Partial Content for resume; device UI remains minimal; RWLOG sample layout remains v51' > dist/FLASH_LAYOUT.txt
           (cd dist && sha256sum *.bin > SHA256SUMS.txt)
           git diff --exit-code
       - uses: actions/upload-artifact@v4
         with:
-          name: atoms3r-v46an-${{ github.sha }}
+          name: atoms3r-v46ao-${{ github.sha }}
           path: dist/
           if-no-files-found: error
           retention-days: 30

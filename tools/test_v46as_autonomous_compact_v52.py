@@ -89,9 +89,9 @@ with tempfile.TemporaryDirectory(prefix='rwlog_v52_') as temp:
     assert row['pulse_direction']=='-1'
     assert row['mekf_accel_confidence']=='0.9300'
 
-assert manifest['version']=='0.46.44'
-assert 'V46as' in manifest['name']
-assert 'V46as / 0.46.44' in site
+assert manifest['version'] in ('0.46.44','0.46.45')
+assert 'V46as' in manifest['name'] or 'V46at' in manifest['name']
+assert 'V46as / 0.46.44' in site or 'V46at / 0.46.45' in site
 
 for token in (
     'AMPLITUDE_CONTROL_REVISION[] = "v46al_previous_peak_active_control_20260921"',

@@ -24,6 +24,8 @@ assert 'sizeof(AutonomousCompactSample) == 40' in types
 assert struct.calcsize('<IIIhhhhhHHHHBBbBBBhh') == 40
 
 assert 'AutonomousCompactSample* autonomous_samples_' in logger_h
+assert 'const size_t active_sample_count =' in logger
+assert 'active_sample_count == 0' in logger
 assert 'bool addAutonomousSample(const AutonomousCompactSample& row);' in logger_h
 assert 'autonomous_sample_count_' in logger_h
 assert 'autonomous_sample_capacity_' in logger_h

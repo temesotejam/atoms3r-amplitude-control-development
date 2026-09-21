@@ -18,9 +18,9 @@ assert "ENERGY_CONTROL_AUTONOMOUS_TIMING_COMPENSATION_US = 3000UL" in config
 assert 'AMPLITUDE_CONTROL_OBSERVATION_REVISION[] = "v46ak_pre_input_state_observation_20260920"' in config
 
 # V46ak observation remains frozen inside the stable-based successor build.
-assert manifest["version"] == "0.46.41"
-assert "V46al-R1" in manifest["name"]
-assert "V46al-R1 / 0.46.41" in site
+assert manifest["version"] == "0.46.42"
+assert "V46al-R2" in manifest["name"]
+assert "V46al-R2 / 0.46.42" in site
 
 # Official Roller485 Speed Readback register and scale.
 assert "REG_SPEED_READBACK = 0x60" in roller_cpp

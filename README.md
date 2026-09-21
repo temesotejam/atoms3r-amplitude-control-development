@@ -50,20 +50,38 @@ AtomS3Rを用いたリアクションホイール系の**振幅制御改善**を
 - [V46ai: rate-only次ピーク予測](docs/V46AI_RATE_ONLY_BASELINE.md)
 - [元リポジトリ最終スナップショット](docs/FINAL_SNAPSHOT_20260920_JA.md)
 
-## 現在の開発版: V46ak / 0.46.36
+## 現在の開発版: V46al-R1 / 0.46.41
 
-V46ajの姿勢推定・3 ms補償・ピーク判定・rate-only予測・Q選択・出力上限を変更せず、
-**入力直前の実測電流とRoller485ホイール速度を観測ログへ追加**した版です。
-これらの観測値は制御には使用しません。
+実機確認済みの `atoms3r-amplitude-control-v46ak-stable` を戻り基準とし、
+V46akのZEROクロス rate-only予測に **直前ピーク `A_prev` の残差補正だけ**を追加して、
+その補正後の `A_free` を既存のQ決定へ渡す実制御検証版です。
 
-- [V46akの変更内容](docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md)
+補正は **target=8°、t>=10 s、side別の5 Run測定support内**でのみ有効です。
+それ以外ではV46akのrate-only予測へそのままフォールバックします。
+
+変更しないもの:
+- 6-state MEKF
+- 3 ms固定ZEROクロス補償
+- ZEROクロス/ピーク/side判定
+- 電流・I0モデル
+- 既存Q solverとKi
+- 300 mA / 最大100 ms
+- ESTOPと安全条件
+- V46akの入力直前実電流・ホイール速度観測
+- RWLOG v51時系列レイアウト
+- 現在のRWLOGダウンロード経路
+
+基準stable: `atoms3r-amplitude-control-v46ak-stable@bb9c5ed07c5ca8b3c6c6b5813b6c2f1b1f57a6ec`
+
+- [V46al-R1の変更内容](docs/V46AL_R1_PREVIOUS_PEAK_ACTIVE_CONTROL.md)
+- [V46akの観測追加内容](docs/V46AK_PRE_INPUT_STATE_OBSERVATION.md)
 - [V46ajの確定済み角度推定](docs/ATTITUDE_ESTIMATION_V46AI_JA.md)
 
 ## 現在のWeb flasher
 
 [AtomS3R Web flasher](https://temesotejam.github.io/atoms3r-amplitude-control-development/)
 
-現在は **V46ak / 0.46.36** を書き込みます。
+現在は **V46al-R1 / 0.46.41** を書き込みます。
 
 ---
 

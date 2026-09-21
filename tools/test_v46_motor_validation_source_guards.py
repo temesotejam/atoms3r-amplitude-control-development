@@ -28,7 +28,7 @@ def main() -> None:
     for token in (
         'server_->on("/start-energy-control-autonomous"',
         "runner_->startEnergyControlAutonomousCapture()",
-        "Start autonomous energy control",
+        "8°測定を開始",
         'server_->on("/stop"',
         'runner_->requestEmergencyStop("web_estop")',
         "displayFrozen",
@@ -46,7 +46,7 @@ def main() -> None:
 
     # V46o keeps the UI frozen but receives a small heartbeat to show ESTOP.
     # Test the replacement behavior, not the obsolete 41-second polling pause.
-    status_region = web[web.index("void WebUi::handleStatus()"):web.index("void WebUi::handleStartPassive()")]
+    status_region = web[web.index("void WebUi::handleStatus()"):web.index("void WebUi::handleStartEnergyControlAutonomous()")]
     assert "char body[192]" in status_region
     assert status_region.index("return;") < status_region.index("statusJson()")
     assert "41000" not in web
